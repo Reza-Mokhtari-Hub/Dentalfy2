@@ -173,6 +173,8 @@ export interface IAccountRequest extends Document {
   name: string;
   email: string;
   bio: string;
+  password?: string;
+  phoneNumber?: string;
   status: "pending" | "approved" | "rejected";
   createdAt: Date;
 }
@@ -181,6 +183,8 @@ const AccountRequestSchema = new Schema<IAccountRequest>({
   name: { type: String, required: true },
   email: { type: String, required: true, lowercase: true, trim: true },
   bio: { type: String, default: "" },
+  password: { type: String },
+  phoneNumber: { type: String },
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   createdAt: { type: Date, default: Date.now }
 });

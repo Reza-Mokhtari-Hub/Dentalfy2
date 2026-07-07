@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { 
-  Shield, BookOpen, FileText, Users, Settings, LogOut, 
+  Shield, BookOpen, FileText, Users, Settings, LogOut, Menu, X, 
   PlusCircle, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronUp, ChevronDown, 
   Upload, Download, HelpCircle, Lock, User, RefreshCw, Eye, MessageSquare, Sparkles
 } from "lucide-react";
@@ -19,6 +19,8 @@ interface PanelDashboardProps {
 export function PanelDashboard({ currentUser, settings, courses, posts, onLogout, onRefreshData }: PanelDashboardProps) {
   const isAdmin = currentUser.role === "admin";
   const [activeTab, setActiveTab] = useState<"dashboard" | "posts" | "courses" | "requests" | "siteSettings" | "profile" | "comments" | "libraryAndFaqs">("dashboard");
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
 
   // Dynamic resources states
   const [allComments, setAllComments] = useState<IComment[]>([]);
@@ -76,6 +78,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const [rejectionReasonInput, setRejectionReasonInput] = useState("");
   const [globalMessage, setGlobalMessage] = useState<string | null>(null);
   const [approvalPasswordModal, setApprovalPasswordModal] = useState<{ isOpen: boolean; password?: string; name?: string; email?: string } | null>(null);
+  const [requestActionModal, setRequestActionModal] = useState<{ isOpen: boolean, reqId: string, action: "approve" | "reject", message: string } | null>(null);
 
   // Users lists & user action states
   const [allUsers, setAllUsers] = useState<IUser[]>([]);
@@ -259,44 +262,38 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     }
   };
 
-  // Approve Account Request (Admin)
-  const handleApproveRequest = async (requestId: string) => {
-    const reqItem = allRequests.find(r => r._id === requestId);
-    const tempPass = "dental" + Math.floor(1000 + Math.random() * 9000);
-    try {
-      const res = await fetch("/api/requests/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId, action: "approve", tempPassword: tempPass })
-      });
-      if (res.ok) {
-        setApprovalPasswordModal({
-          isOpen: true,
-          password: tempPass,
-          name: reqItem?.name || "نویسنده جدید",
-          email: reqItem?.email || ""
-        });
-        fetchAdminLists();
-      }
-    } catch (err) {
-      alert("خطا در تایید درخواست.");
-    }
+  // Open Approve Modal
+  const handleApproveRequest = (requestId: string) => {
+    setRequestActionModal({ isOpen: true, reqId: requestId, action: "approve", message: "" });
   };
 
-  // Reject Account Request (Admin)
-  const handleRejectRequest = async (requestId: string) => {
+  // Open Reject Modal
+  const handleRejectRequest = (requestId: string) => {
+    setRequestActionModal({ isOpen: true, reqId: requestId, action: "reject", message: "" });
+  };
+
+  // Submit Account Request Action
+  const submitRequestAction = async () => {
+    if (!requestActionModal) return;
     try {
       const res = await fetch("/api/requests/action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId, action: "reject" })
+        body: JSON.stringify({ 
+          requestId: requestActionModal.reqId, 
+          action: requestActionModal.action, 
+          adminMessage: requestActionModal.message 
+        })
       });
       if (res.ok) {
-        showMessage("درخواست عضویت رد شد.");
+        showMessage(`درخواست عضویت با موفقیت ${requestActionModal.action === "approve" ? "تأیید" : "رد"} شد و ایمیل اطلاع‌رسانی ارسال گردید.`);
+        setRequestActionModal(null);
         fetchAdminLists();
+      } else {
+        alert("خطا در انجام عملیات.");
       }
     } catch (err) {
-      alert("خطا در رد درخواست.");
+      alert("خطا در انجام عملیات.");
     }
   };
 
@@ -700,7 +697,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const rejectedCount = allPosts.filter(p => p.status === "rejected").length;
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800 font-sans" dir="rtl">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans overflow-hidden" dir="rtl">
       {/* Toast Notification */}
       <AnimatePresence>
         {globalMessage && (
@@ -716,20 +713,33 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
         )}
       </AnimatePresence>
 
+      {/* Mobile Overlay */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* Left Sidebar Navigation */}
-      <aside className="w-64 bg-white border-l border-slate-200 flex flex-col justify-between shrink-0">
+      <aside className={`fixed md:relative top-0 right-0 z-50 w-64 h-full bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 flex flex-col justify-between shrink-0 transition-transform duration-300 ${isMobileSidebarOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"}`}>
+        <div className="md:hidden flex justify-end p-4 border-b border-slate-100 dark:border-slate-800">
+          <button onClick={() => setIsMobileSidebarOpen(false)} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+            ✕ بستن منو
+          </button>
+        </div>
         <div className="flex flex-col">
           {/* Logo / Title */}
-          <div className="p-6 flex items-center gap-3 border-b border-slate-100">
+          <div className="p-6 flex items-center gap-3 border-b border-slate-100 dark:border-slate-800">
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center">
-              <div className="w-4 h-4 bg-white rounded-full opacity-80"></div>
+              <div className="w-4 h-4 bg-white dark:bg-slate-800 rounded-full opacity-80"></div>
             </div>
             <span className="text-xl font-black text-teal-800">{settings.siteName}</span>
           </div>
 
           {/* User Profile Summary */}
-          <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-slate-200 border border-slate-100 overflow-hidden relative shrink-0">
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-slate-200 border border-slate-100 dark:border-slate-800 overflow-hidden relative shrink-0">
               <img 
                 src={profilePicBase64 || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200"} 
                 alt={currentUser.name} 
@@ -738,7 +748,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               />
             </div>
             <div className="overflow-hidden">
-              <div className="text-xs font-bold text-slate-700 truncate">{currentUser.name}</div>
+              <div className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">{currentUser.name}</div>
               <div className="text-[10px] text-slate-400 font-mono truncate">{currentUser.email}</div>
             </div>
           </div>
@@ -748,23 +758,23 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold px-3 py-2">مدیریت آکادمی</div>
             
             <button 
-              onClick={() => { setActiveTab("dashboard"); setIsCreatingPost(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "dashboard" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+              onClick={() => { setActiveTab("dashboard"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "dashboard" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
             >
               <Shield className="w-4 h-4" /> داشبورد
             </button>
 
             <button 
-              onClick={() => { setActiveTab("posts"); setIsCreatingPost(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "posts" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+              onClick={() => { setActiveTab("posts"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "posts" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
             >
               <FileText className="w-4 h-4" /> {isAdmin ? "کل پست‌های سایت" : "پست‌های من"}
               <span className="mr-auto bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold">{allPosts.length}</span>
             </button>
 
             <button 
-              onClick={() => { setActiveTab("comments"); setIsCreatingPost(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "comments" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+              onClick={() => { setActiveTab("comments"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "comments" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
             >
               <MessageSquare className="w-4 h-4" /> پرسش‌ها و نظرات بالینی
               <span className="mr-auto bg-teal-100 text-teal-700 text-[10px] px-2 py-0.5 rounded-full font-bold">{allComments.length}</span>
@@ -773,8 +783,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             {isAdmin && (
               <>
                 <button 
-                  onClick={() => { setActiveTab("courses"); setIsCreatingPost(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "courses" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+                  onClick={() => { setActiveTab("courses"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "courses" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
                 >
                   <BookOpen className="w-4 h-4" /> دروس و سرفصل‌ها
                 </button>
@@ -782,8 +792,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold px-3 py-2 pt-4">بخش نظارت ادمین</div>
 
                 <button 
-                  onClick={() => { setActiveTab("requests"); setIsCreatingPost(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "requests" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+                  onClick={() => { setActiveTab("requests"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "requests" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
                 >
                   <Users className="w-4 h-4" /> درخواست‌های نویسندگی
                   {allRequests.filter(r => r.status === "pending").length > 0 && (
@@ -792,25 +802,25 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 </button>
 
                 <button 
-                  onClick={() => { setActiveTab("writers" as any); setIsCreatingPost(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === ("writers" as any) ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+                  onClick={() => { setActiveTab("users" as any); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === ("users" as any) ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
                 >
-                  <Users className="w-4 h-4" /> مدیریت نویسندگان علمی
+                  <Users className="w-4 h-4" /> مدیریت کاربران
                   <span className="mr-auto bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                    {allUsers.filter(u => u.role === "author").length}
+                    {allUsers.length}
                   </span>
                 </button>
 
                 <button 
-                  onClick={() => { setActiveTab("libraryAndFaqs"); setIsCreatingPost(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "libraryAndFaqs" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+                  onClick={() => { setActiveTab("libraryAndFaqs"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "libraryAndFaqs" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
                 >
                   <HelpCircle className="w-4 h-4" /> کتابخانه فرم‌ها و FAQ
                 </button>
 
                 <button 
-                  onClick={() => { setActiveTab("siteSettings"); setIsCreatingPost(false); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "siteSettings" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+                  onClick={() => { setActiveTab("siteSettings"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "siteSettings" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
                 >
                   <Settings className="w-4 h-4" /> تنظیمات سایت
                 </button>
@@ -818,8 +828,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             )}
 
             <button 
-              onClick={() => { setActiveTab("profile"); setIsCreatingPost(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "profile" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50"}`}
+              onClick={() => { setActiveTab("profile"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold cursor-pointer transition-colors ${activeTab === "profile" ? "bg-teal-50 text-teal-700" : "text-slate-500 hover:bg-slate-50 dark:bg-slate-900"}`}
             >
               <User className="w-4 h-4" /> ویرایش پروفایل من
             </button>
@@ -827,7 +837,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
         </div>
 
         {/* Bottom logout */}
-        <div className="p-4 border-t border-slate-100">
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
           <button 
             onClick={onLogout}
             className="w-full flex items-center justify-center gap-2 py-2.5 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all cursor-pointer"
@@ -840,10 +850,18 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
       {/* Main Panel Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header bar */}
-        <header className="h-16 bg-white border-b border-slate-200 px-8 flex items-center justify-between shrink-0">
-          <div>
-            <h1 className="text-base font-extrabold text-slate-800">داشبورد یکپارچه دنتالفای</h1>
-            <p className="text-[10px] text-slate-400 font-medium">سرویس دهی ابری و مانیتورینگ امن با RMO Cloud Node</p>
+        <header className="h-16 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 sm:px-8 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="md:hidden p-2 text-slate-600 bg-slate-100 rounded-xl"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100">داشبورد یکپارچه</h1>
+              <p className="text-[9px] sm:text-[10px] text-slate-400 font-medium hidden sm:block">سرویس دهی ابری و مانیتورینگ امن با RMO Cloud Node</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <button 
@@ -863,22 +881,22 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               <div className="flex items-center justify-between">
                 <button 
                   onClick={() => setIsCreatingPost(false)}
-                  className="px-3.5 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer text-slate-700"
+                  className="px-3.5 py-1.5 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:bg-slate-900 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer text-slate-700 dark:text-slate-200"
                 >
                   <ChevronLeft className="w-4.5 h-4.5" /> بازگشت
                 </button>
                 
                 {/* Editor Tabs: Edit vs Preview */}
-                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1">
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 dark:border-slate-700 gap-1">
                   <button
                     onClick={() => setEditorActiveSubTab("edit")}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${editorActiveSubTab === "edit" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${editorActiveSubTab === "edit" ? "bg-white dark:bg-slate-800 text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-100"}`}
                   >
                     ویرایش محتوا
                   </button>
                   <button
                     onClick={() => setEditorActiveSubTab("preview")}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${editorActiveSubTab === "preview" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${editorActiveSubTab === "preview" ? "bg-white dark:bg-slate-800 text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-100"}`}
                   >
                     پیش‌نمایش بالینی
                   </button>
@@ -891,7 +909,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
 
               {editorActiveSubTab === "edit" ? (
                 /* --- EDITING VIEW --- */
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-6 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-6 shadow-sm">
                   {/* AI Writing Assistant Box */}
                   <div className="bg-gradient-to-l from-teal-500/10 to-emerald-500/10 border border-teal-500/20 rounded-2xl p-4 space-y-3">
                     <div className="flex items-center gap-2">
@@ -910,7 +928,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         value={aiTopicInput}
                         onChange={(e) => setAiTopicInput(e.target.value)}
                         placeholder="مثال: روش‌های تراش لبه دندان در درمان ونیر کامپوزیت"
-                        className="flex-1 px-3 py-2.5 bg-white border border-teal-100 rounded-xl text-xs focus:outline-none focus:border-teal-500 placeholder:text-slate-400 font-bold"
+                        className="flex-1 px-3 py-2.5 bg-white dark:bg-slate-800 border border-teal-100 rounded-xl text-xs focus:outline-none focus:border-teal-500 placeholder:text-slate-400 font-bold"
                       />
                       <button
                         type="button"
@@ -943,7 +961,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         value={postTitle}
                         onChange={(e) => setPostTitle(e.target.value)}
                         placeholder="مثال: روش‌های آماده‌سازی اندودنتیکس در کانال‌های خمیده" 
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-teal-500 text-slate-800"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100"
                       />
                     </div>
 
@@ -953,7 +971,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       <select 
                         value={postCourseId}
                         onChange={(e) => setPostCourseId(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 font-bold"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100 font-bold"
                       >
                         {allCourses.map(c => (
                           <option key={c._id} value={c._id}>{c.title}</option>
@@ -969,7 +987,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         value={postTags}
                         onChange={(e) => setPostTags(e.target.value)}
                         placeholder="مثال: اندو, روتاری, درمان ریشه (با کاما جدا کنید)" 
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100"
                       />
                     </div>
 
@@ -981,7 +999,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         onChange={(e) => setPostSummary(e.target.value)}
                         placeholder="خلاصه‌ای یک یا دو جمله‌ای از کاربرد بالینی این مقاله بنویسید..." 
                         rows={2}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800"
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100"
                       />
                     </div>
 
@@ -989,7 +1007,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     <div className="space-y-1 md:col-span-2">
                       <label className="text-[11px] font-bold text-slate-500">تصویر شاخص مقاله دندانپزشکی (Cover Image)</label>
                       {postCoverImage ? (
-                        <div className="relative rounded-xl overflow-hidden border border-slate-200 max-h-48 bg-slate-100 flex items-center justify-center">
+                        <div className="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 max-h-48 bg-slate-100 flex items-center justify-center">
                           <img src={postCoverImage} className="w-full h-48 object-cover" alt="تصویر شاخص" />
                           <button 
                             onClick={() => setPostCoverImage("")}
@@ -1002,7 +1020,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         <div 
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleFileChange(e, "coverImage")}
-                          className="border-2 border-dashed border-slate-200 hover:border-teal-500 rounded-xl p-6 text-center bg-slate-50/50 cursor-pointer transition-colors relative"
+                          className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-6 text-center bg-slate-50 dark:bg-slate-900/50 cursor-pointer transition-colors relative"
                         >
                           <input 
                             type="file" 
@@ -1011,7 +1029,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                             className="absolute inset-0 opacity-0 cursor-pointer"
                           />
                           <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
-                          <div className="text-xs font-bold text-slate-600">تصویر شاخص مقاله را بکشید یا برای انتخاب کلیک کنید</div>
+                          <div className="text-xs font-bold text-slate-600 dark:text-slate-300">تصویر شاخص مقاله را بکشید یا برای انتخاب کلیک کنید</div>
                           <span className="text-[9px] text-slate-400">نمایش زیباتر در بالای مقاله</span>
                         </div>
                       )}
@@ -1019,17 +1037,17 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   </div>
 
                   {/* Blocks list */}
-                  <div className="space-y-4 border-t border-slate-100 pt-6">
-                    <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <div className="space-y-4 border-t border-slate-100 dark:border-slate-800 pt-6">
+                    <div className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
                       <span>محتوای ساختاریافته مقاله علمی</span>
                       <span className="text-[10px] text-slate-400 font-semibold">استفاده از سیستم بلوکی هوشمند</span>
                     </div>
                     
                     {postBlocks.map((block, index) => (
-                      <div key={block.id} className="p-4 bg-slate-50/50 rounded-xl border border-slate-200 space-y-3 relative group">
-                        <div className="flex items-center justify-between border-b border-slate-100/60 pb-2">
+                      <div key={block.id} className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 relative group">
+                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-2">
                           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                            <span className="w-4 h-4 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center font-mono text-[8px]">{index + 1}</span>
+                            <span className="w-4 h-4 bg-slate-200 text-slate-600 dark:text-slate-300 rounded-full flex items-center justify-center font-mono text-[8px]">{index + 1}</span>
                             {block.type === "heading" ? "عنوان فرعی" : block.type === "text" ? "متن ساده" : block.type === "image" ? "تصویر" : block.type === "video" ? "ویدیو" : block.type === "pdf" ? "سند PDF" : block.type === "quote" ? "نقل قول" : block.type === "divider" ? "خط جداکننده" : "لیست آیتم‌ها"}
                           </span>
                           <div className="flex gap-1">
@@ -1071,14 +1089,14 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateBlockValue(block.id, { ...hVal, level: "h2" })}
-                                  className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${hVal.level === "h2" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                  className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${hVal.level === "h2" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600 dark:text-slate-300 hover:bg-slate-200"}`}
                                 >
                                   تیتر اصلی (H2)
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateBlockValue(block.id, { ...hVal, level: "h3" })}
-                                  className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${hVal.level === "h3" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                  className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${hVal.level === "h3" ? "bg-teal-600 text-white" : "bg-slate-100 text-slate-600 dark:text-slate-300 hover:bg-slate-200"}`}
                                 >
                                   تیتر فرعی (H3)
                                 </button>
@@ -1088,7 +1106,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                 value={hVal.text || ""}
                                 onChange={(e) => handleUpdateBlockValue(block.id, { ...hVal, text: e.target.value })}
                                 placeholder="عنوان فرعی را وارد کنید..."
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500 text-slate-800"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100"
                               />
                             </div>
                           );
@@ -1100,7 +1118,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                             value={typeof block.value === "object" ? (block.value?.text || "") : (block.value || "")}
                             onChange={(e) => handleUpdateBlockValue(block.id, e.target.value)}
                             placeholder="متن خود را در این بخش بنویسید..."
-                            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 h-28 text-slate-800 leading-relaxed font-medium"
+                            className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 h-28 text-slate-800 dark:text-slate-100 leading-relaxed font-medium"
                           />
                         )}
 
@@ -1113,7 +1131,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                 value={qVal.text || ""}
                                 onChange={(e) => handleUpdateBlockValue(block.id, { ...qVal, text: e.target.value })}
                                 placeholder="متن نقل قول را وارد کنید..."
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800 italic h-20 leading-relaxed font-medium"
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100 italic h-20 leading-relaxed font-medium"
                               />
                               <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold text-slate-400 shrink-0">نام نویسنده/منبع:</span>
@@ -1122,7 +1140,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                   value={qVal.author || ""}
                                   onChange={(e) => handleUpdateBlockValue(block.id, { ...qVal, author: e.target.value })}
                                   placeholder="دستیار دنتالفای..."
-                                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700 font-bold"
+                                  className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700 dark:text-slate-200 font-bold"
                                 />
                               </div>
                             </div>
@@ -1133,20 +1151,20 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         {block.type === "list" && (() => {
                           const lVal = block.value && typeof block.value === "object" && !Array.isArray(block.value) ? block.value : { items: Array.isArray(block.value) ? block.value : [""], listType: "bullet" };
                           return (
-                            <div className="space-y-3 bg-slate-100/50 p-3 rounded-lg border border-slate-200/50">
+                            <div className="space-y-3 bg-slate-100/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/50">
                               <div className="flex gap-2 items-center justify-between">
                                 <div className="flex gap-2">
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateBlockValue(block.id, { ...lVal, listType: "bullet" })}
-                                    className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${lVal.listType === "bullet" ? "bg-teal-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}
+                                    className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${lVal.listType === "bullet" ? "bg-teal-600 text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"}`}
                                   >
                                     لیست نشانه‌دار (•)
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleUpdateBlockValue(block.id, { ...lVal, listType: "ordered" })}
-                                    className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${lVal.listType === "ordered" ? "bg-teal-600 text-white" : "bg-white text-slate-600 border border-slate-200"}`}
+                                    className={`px-3 py-1 rounded text-[10px] font-bold cursor-pointer transition-colors ${lVal.listType === "ordered" ? "bg-teal-600 text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"}`}
                                   >
                                     لیست شماره‌دار (1.)
                                   </button>
@@ -1175,7 +1193,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                         handleUpdateBlockValue(block.id, { ...lVal, items: updated });
                                       }}
                                       placeholder={`آیتم شماره ${idx + 1}...`}
-                                      className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800"
+                                      className="flex-1 px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100"
                                     />
                                     {lVal.items.length > 1 && (
                                       <button
@@ -1204,7 +1222,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                             <div className="space-y-3">
                               {iVal.url ? (
                                 <div className="space-y-2">
-                                  <div className="relative rounded-lg overflow-hidden border border-slate-200 max-h-48 bg-slate-100 flex items-center justify-center">
+                                  <div className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 max-h-48 bg-slate-100 flex items-center justify-center">
                                     <img src={iVal.url} className="h-full max-h-48 object-contain" alt="بارگذاری شده" />
                                     <button 
                                       type="button"
@@ -1219,7 +1237,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                     value={iVal.caption || ""}
                                     onChange={(e) => handleUpdateBlockValue(block.id, { ...iVal, caption: e.target.value })}
                                     placeholder="توضیح یا منبع عکس (Caption) اختیاری..."
-                                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-600 italic"
+                                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-600 dark:text-slate-300 italic"
                                   />
                                 </div>
                               ) : (
@@ -1227,7 +1245,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                   <div 
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => handleFileChange(e, { blockId: block.id })}
-                                    className="border-2 border-dashed border-slate-200 hover:border-teal-500 rounded-xl p-5 text-center bg-white cursor-pointer transition-colors relative"
+                                    className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-5 text-center bg-white dark:bg-slate-800 cursor-pointer transition-colors relative"
                                   >
                                     <input 
                                       type="file" 
@@ -1236,7 +1254,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                       className="absolute inset-0 opacity-0 cursor-pointer"
                                     />
                                     <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
-                                    <div className="text-xs font-bold text-slate-600">عکس مورد نظر را بکشید یا برای انتخاب کلیک کنید</div>
+                                    <div className="text-xs font-bold text-slate-600 dark:text-slate-300">عکس مورد نظر را بکشید یا برای انتخاب کلیک کنید</div>
                                     <span className="text-[9px] text-slate-400">ذخیره خودکار در پایگاه ابری دنتالفای</span>
                                   </div>
                                   <input 
@@ -1244,7 +1262,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                     value={iVal.url || ""}
                                     onChange={(e) => handleUpdateBlockValue(block.id, { ...iVal, url: e.target.value })}
                                     placeholder="یا آدرس اینترنتی عکس (URL) را مستقیماً وارد کنید..."
-                                    className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700 text-left"
+                                    className="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700 dark:text-slate-200 text-left"
                                     dir="ltr"
                                   />
                                 </div>
@@ -1283,7 +1301,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                   <div 
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => handleFileChange(e, { blockId: block.id })}
-                                    className="border-2 border-dashed border-slate-200 hover:border-teal-500 rounded-xl p-4 text-center bg-white cursor-pointer transition-colors relative"
+                                    className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 text-center bg-white dark:bg-slate-800 cursor-pointer transition-colors relative"
                                   >
                                     <input 
                                       type="file" 
@@ -1292,7 +1310,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                       className="absolute inset-0 opacity-0 cursor-pointer"
                                     />
                                     <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-                                    <div className="text-[10px] font-bold text-slate-600">کشیدن یا آپلود ویدیو دندانپزشکی</div>
+                                    <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300">کشیدن یا آپلود ویدیو دندانپزشکی</div>
                                     <span className="text-[8px] text-slate-400">فرمت‌های Mp4, WebM</span>
                                   </div>
 
@@ -1302,7 +1320,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                       value={vVal.url || ""}
                                       onChange={(e) => handleUpdateBlockValue(block.id, { ...vVal, url: e.target.value })}
                                       placeholder="آدرس ویدیوی یوتیوب، آپارات یا لینک مستقیم..."
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800 text-left"
+                                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100 text-left"
                                       dir="ltr"
                                     />
                                     <input 
@@ -1310,7 +1328,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                       value={vVal.caption || ""}
                                       onChange={(e) => handleUpdateBlockValue(block.id, { ...vVal, caption: e.target.value })}
                                       placeholder="توضیحات ویدیو (Caption)..."
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700"
+                                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700 dark:text-slate-200"
                                     />
                                   </div>
                                 </div>
@@ -1325,7 +1343,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           return (
                             <div className="space-y-3">
                               {pVal.url ? (
-                                <div className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
+                                <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
                                   <div className="text-xs font-bold text-teal-700 truncate max-w-[80%] flex items-center gap-1.5">
                                     <span className="px-2 py-0.5 bg-teal-50 rounded text-[9px] font-black">PDF</span>
                                     {pVal.name || "سند ضمیمه بارگذاری شده"}
@@ -1343,7 +1361,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                   <div 
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => handleFileChange(e, { blockId: block.id })}
-                                    className="border-2 border-dashed border-slate-200 hover:border-teal-500 rounded-xl p-4 text-center bg-white cursor-pointer transition-colors relative"
+                                    className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 rounded-xl p-4 text-center bg-white dark:bg-slate-800 cursor-pointer transition-colors relative"
                                   >
                                     <input 
                                       type="file" 
@@ -1352,7 +1370,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                       className="absolute inset-0 opacity-0 cursor-pointer"
                                     />
                                     <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-                                    <div className="text-[10px] font-bold text-slate-600">کشیدن یا آپلود ضمیمه PDF</div>
+                                    <div className="text-[10px] font-bold text-slate-600 dark:text-slate-300">کشیدن یا آپلود ضمیمه PDF</div>
                                     <span className="text-[8px] text-slate-400">حداکثر ۲۵ مگابایت</span>
                                   </div>
 
@@ -1362,14 +1380,14 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                       value={pVal.name || ""}
                                       onChange={(e) => handleUpdateBlockValue(block.id, { ...pVal, name: e.target.value })}
                                       placeholder="نام فارسی سند (مثلاً: پروتکل درمانی کانال)"
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800 font-bold"
+                                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100 font-bold"
                                     />
                                     <input 
                                       type="text"
                                       value={pVal.url || ""}
                                       onChange={(e) => handleUpdateBlockValue(block.id, { ...pVal, url: e.target.value })}
                                       placeholder="یا آدرس اینترنتی مستقیم فایل PDF..."
-                                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700 text-left"
+                                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500 text-slate-700 dark:text-slate-200 text-left"
                                       dir="ltr"
                                     />
                                   </div>
@@ -1383,7 +1401,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         {block.type === "divider" && (
                           <div className="py-4 flex items-center justify-center">
                             <div className="w-full border-t border-dashed border-slate-300"></div>
-                            <span className="px-3 text-[9px] font-bold text-slate-400 shrink-0 uppercase tracking-widest bg-slate-50">خط جداکننده خطوط</span>
+                            <span className="px-3 text-[9px] font-bold text-slate-400 shrink-0 uppercase tracking-widest bg-slate-50 dark:bg-slate-900">خط جداکننده خطوط</span>
                             <div className="w-full border-t border-dashed border-slate-300"></div>
                           </div>
                         )}
@@ -1392,39 +1410,39 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     ))}
 
                     {/* Add Block Toolbar */}
-                    <div className="flex flex-wrap gap-2 bg-slate-100 p-3 rounded-2xl border border-slate-200 justify-center">
-                      <button onClick={() => handleAddNewBlock("text")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                    <div className="flex flex-wrap gap-2 bg-slate-100 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 justify-center">
+                      <button onClick={() => handleAddNewBlock("text")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + متن پاراگراف
                       </button>
-                      <button onClick={() => handleAddNewBlock("heading")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                      <button onClick={() => handleAddNewBlock("heading")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + عنوان فرعی (H2/H3)
                       </button>
-                      <button onClick={() => handleAddNewBlock("quote")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                      <button onClick={() => handleAddNewBlock("quote")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + نقل قول دندانپزشک
                       </button>
-                      <button onClick={() => handleAddNewBlock("list")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                      <button onClick={() => handleAddNewBlock("list")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + لیست هوشمند
                       </button>
-                      <button onClick={() => handleAddNewBlock("image")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                      <button onClick={() => handleAddNewBlock("image")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + تصویر بالینی
                       </button>
-                      <button onClick={() => handleAddNewBlock("video")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                      <button onClick={() => handleAddNewBlock("video")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + ویدیو شبیه‌ساز
                       </button>
-                      <button onClick={() => handleAddNewBlock("pdf")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                      <button onClick={() => handleAddNewBlock("pdf")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + سند ضمیمه/PDF
                       </button>
-                      <button onClick={() => handleAddNewBlock("divider")} className="px-3 py-1.5 bg-white text-slate-700 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
+                      <button onClick={() => handleAddNewBlock("divider")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + خط جداکننده (Divider)
                       </button>
                     </div>
                   </div>
 
                   {/* Multi-role action buttons */}
-                  <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+                  <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
                     <button 
                       onClick={() => handleSavePostToDB("draft")}
-                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl text-xs transition-all cursor-pointer border border-slate-200"
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-extrabold rounded-xl text-xs transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
                     >
                       ذخیره به عنوان پیش‌نویس
                     </button>
@@ -1448,9 +1466,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 </div>
               ) : (
                 /* --- PREVIEW VIEW (CLINICAL STYLED) --- */
-                <div className="bg-white rounded-2xl border border-slate-200 p-8 space-y-6 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8 space-y-6 shadow-sm">
                   {postCoverImage && (
-                    <div className="w-full h-60 rounded-xl overflow-hidden border border-slate-200">
+                    <div className="w-full h-60 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
                       <img src={postCoverImage} className="w-full h-full object-cover" alt="Cover" />
                     </div>
                   )}
@@ -1459,40 +1477,40 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     <span className="px-2.5 py-1 bg-teal-50 text-teal-700 rounded-lg text-[10px] font-bold uppercase tracking-wide">
                       {allCourses.find(c => c._id === postCourseId)?.title || "درس تخصصی انتخاب نشده"}
                     </span>
-                    <h2 className="text-xl font-black text-slate-800 leading-relaxed">{postTitle || "عنوان مقاله را وارد نکرده‌اید"}</h2>
+                    <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 leading-relaxed">{postTitle || "عنوان مقاله را وارد نکرده‌اید"}</h2>
                   </div>
 
                   {postSummary && (
-                    <div className="p-4 bg-teal-50/50 border-r-4 border-teal-500 rounded-l-xl text-slate-700 text-xs font-semibold leading-relaxed">
+                    <div className="p-4 bg-teal-50/50 border-r-4 border-teal-500 rounded-l-xl text-slate-700 dark:text-slate-200 text-xs font-semibold leading-relaxed">
                       {postSummary}
                     </div>
                   )}
 
                   {/* Render Blocks Preview */}
-                  <div className="space-y-6 pt-4 border-t border-slate-100">
+                  <div className="space-y-6 pt-4 border-t border-slate-100 dark:border-slate-800">
                     {postBlocks.map((block, idx) => {
                       switch (block.type) {
                         case "heading": {
                           const hVal = block.value && typeof block.value === "object" ? block.value : { text: block.value || "", level: "h2" };
                           if (hVal.level === "h3") {
                             return (
-                              <h4 key={block.id || idx} className="text-xs font-black text-slate-800 border-r-2 border-emerald-500 pr-2 pt-1">{hVal.text}</h4>
+                              <h4 key={block.id || idx} className="text-xs font-black text-slate-800 dark:text-slate-100 border-r-2 border-emerald-500 pr-2 pt-1">{hVal.text}</h4>
                             );
                           }
                           return (
-                            <h3 key={block.id || idx} className="text-sm font-bold text-slate-800 border-r-2 border-teal-500 pr-2 pt-2">{hVal.text}</h3>
+                            <h3 key={block.id || idx} className="text-sm font-bold text-slate-800 dark:text-slate-100 border-r-2 border-teal-500 pr-2 pt-2">{hVal.text}</h3>
                           );
                         }
                         case "text": {
                           const tText = typeof block.value === "object" ? (block.value?.text || "") : (block.value || "");
                           return (
-                            <p key={block.id || idx} className="text-xs text-slate-600 leading-relaxed text-justify whitespace-pre-line">{tText}</p>
+                            <p key={block.id || idx} className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed text-justify whitespace-pre-line">{tText}</p>
                           );
                         }
                         case "quote": {
                           const qVal = block.value && typeof block.value === "object" ? block.value : { text: block.value || "", author: "دنتالفای" };
                           return (
-                            <div key={block.id || idx} className="p-4 bg-slate-50 border-r-4 border-slate-300 rounded-l-lg text-xs italic text-slate-500 font-medium">
+                            <div key={block.id || idx} className="p-4 bg-slate-50 dark:bg-slate-900 border-r-4 border-slate-300 rounded-l-lg text-xs italic text-slate-500 font-medium">
                               <p className="leading-relaxed">{qVal.text}</p>
                               {qVal.author && <span className="text-[9px] block text-slate-400 mt-1">— {qVal.author}</span>}
                             </div>
@@ -1501,13 +1519,13 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         case "list": {
                           const lVal = block.value && typeof block.value === "object" && !Array.isArray(block.value) ? block.value : { items: Array.isArray(block.value) ? block.value : [""], listType: "bullet" };
                           return lVal.listType === "ordered" ? (
-                            <ol key={block.id || idx} className="list-decimal list-inside space-y-1 pr-2 text-xs text-slate-600 leading-relaxed">
+                            <ol key={block.id || idx} className="list-decimal list-inside space-y-1 pr-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                               {lVal.items.map((item: string, i: number) => (
                                 <li key={i}>{item}</li>
                               ))}
                             </ol>
                           ) : (
-                            <ul key={block.id || idx} className="list-disc list-inside space-y-1 pr-2 text-xs text-slate-600 leading-relaxed">
+                            <ul key={block.id || idx} className="list-disc list-inside space-y-1 pr-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                               {lVal.items.map((item: string, i: number) => (
                                 <li key={i}>{item}</li>
                               ))}
@@ -1517,8 +1535,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         case "image": {
                           const iVal = block.value && typeof block.value === "object" ? block.value : { url: block.value || "", caption: "" };
                           return iVal.url ? (
-                            <div key={block.id || idx} className="space-y-1.5 text-center bg-slate-50 rounded-xl p-2 border border-slate-100">
-                              <div className="rounded-lg overflow-hidden max-h-96 flex justify-center bg-slate-50">
+                            <div key={block.id || idx} className="space-y-1.5 text-center bg-slate-50 dark:bg-slate-900 rounded-xl p-2 border border-slate-100 dark:border-slate-800">
+                              <div className="rounded-lg overflow-hidden max-h-96 flex justify-center bg-slate-50 dark:bg-slate-900">
                                 <img src={iVal.url} className="max-h-96 object-contain" alt="Clinical Illustration" />
                               </div>
                               {iVal.caption && <span className="text-[9px] text-slate-400 font-medium italic">{iVal.caption}</span>}
@@ -1549,9 +1567,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         case "pdf": {
                           const pVal = block.value && typeof block.value === "object" ? block.value : { url: block.value || "", name: "فایل راهنمای بالینی دندانپزشکی" };
                           return pVal.url ? (
-                            <div key={block.id || idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                              <span className="text-xs font-bold text-slate-700 truncate max-w-[70%]">{pVal.name || "سند ضمیمه (رفرنس علمی دندانپزشکی)"}</span>
-                              <a href={pVal.url} download={`${pVal.name || "reference"}.pdf`} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-teal-600 hover:bg-slate-50 shrink-0">
+                            <div key={block.id || idx} className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate max-w-[70%]">{pVal.name || "سند ضمیمه (رفرنس علمی دندانپزشکی)"}</span>
+                              <a href={pVal.url} download={`${pVal.name || "reference"}.pdf`} className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold text-teal-600 hover:bg-slate-50 dark:bg-slate-900 shrink-0">
                                 دانلود سند PDF
                               </a>
                             </div>
@@ -1560,9 +1578,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         case "divider":
                           return (
                             <div key={block.id || idx} className="py-4 flex items-center justify-center">
-                              <div className="w-full border-t border-dashed border-slate-200"></div>
+                              <div className="w-full border-t border-dashed border-slate-200 dark:border-slate-700"></div>
                               <span className="px-2 text-[8px] font-bold text-slate-300">جداکننده</span>
-                              <div className="w-full border-t border-dashed border-slate-200"></div>
+                              <div className="w-full border-t border-dashed border-slate-200 dark:border-slate-700"></div>
                             </div>
                           );
                         default:
@@ -1573,9 +1591,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
 
                   {/* Bottom tags preview */}
                   {postTags && (
-                    <div className="flex flex-wrap gap-1.5 pt-6 border-t border-slate-100">
+                    <div className="flex flex-wrap gap-1.5 pt-6 border-t border-slate-100 dark:border-slate-800">
                       {postTags.split(",").map(t => t.trim()).filter(Boolean).map((tag, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px] font-bold">
+                        <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-600 dark:text-slate-300 rounded text-[9px] font-bold">
                           #{tag}
                         </span>
                       ))}
@@ -1583,9 +1601,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   )}
 
                   <div className="pt-4 flex items-center gap-2.5">
-                    <img src={currentUser.profilePicture} className="w-8 h-8 rounded-full border border-slate-200" alt={currentUser.name} />
+                    <img src={currentUser.profilePicture} className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700" alt={currentUser.name} />
                     <div>
-                      <div className="text-[10px] font-bold text-slate-700">{currentUser.name}</div>
+                      <div className="text-[10px] font-bold text-slate-700 dark:text-slate-200">{currentUser.name}</div>
                       <div className="text-[8px] text-slate-400 font-medium">نویسنده علمی پلتفرم</div>
                     </div>
                   </div>
@@ -1597,15 +1615,15 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             <div className="space-y-8">
               {/* Stats Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">پست‌های منتشر شده</div>
                   <div className="flex items-end gap-2">
-                    <div className="text-3xl font-black text-slate-800">{publishedCount}</div>
+                    <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{publishedCount}</div>
                     <div className="text-[10px] text-emerald-500 font-bold pb-1">بدون محدودیت</div>
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">در انتظار بررسی علمی</div>
                   <div className="flex items-end gap-2">
                     <div className="text-3xl font-black text-teal-600">{pendingCount}</div>
@@ -1613,18 +1631,18 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">نویسندگان همکار</div>
                   <div className="flex items-end gap-2">
-                    <div className="text-3xl font-black text-slate-800">{settings.stats?.authorsCount || 1}</div>
+                    <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{settings.stats?.authorsCount || 1}</div>
                     <div className="text-[10px] text-teal-600 font-bold pb-1">متخصصین تأیید شده</div>
                   </div>
                 </div>
 
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                   <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">دروس دانشگاهی فعال</div>
                   <div className="flex items-end gap-2">
-                    <div className="text-3xl font-black text-slate-800">{allCourses.length}</div>
+                    <div className="text-3xl font-black text-slate-800 dark:text-slate-100">{allCourses.length}</div>
                     <div className="text-[10px] text-slate-400 pb-1">سرفصل فعال مصوب</div>
                   </div>
                 </div>
@@ -1635,9 +1653,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 {/* Right col: Pending posts queue for admin */}
                 <div className="lg:col-span-2 space-y-6">
                   {isAdmin ? (
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                      <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                        <h2 className="font-extrabold text-xs text-slate-700">صف بررسی و تایید مقالات ورودی</h2>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
+                      <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+                        <h2 className="font-extrabold text-xs text-slate-700 dark:text-slate-200">صف بررسی و تایید مقالات ورودی</h2>
                         <span className="text-[10px] text-teal-600 font-bold bg-teal-50 px-2 py-0.5 rounded">نیاز به تایید ادمین</span>
                       </div>
                       
@@ -1650,9 +1668,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           allPosts.filter(p => p.status === "pending").map(post => {
                             const postAuthorName = typeof post.author === "object" ? post.author?.name : "نویسنده";
                             return (
-                              <div key={post._id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 transition-colors">
+                              <div key={post._id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 dark:bg-slate-900/50 transition-colors">
                                 <div>
-                                  <h4 className="font-bold text-xs text-slate-800">{post.title}</h4>
+                                  <h4 className="font-bold text-xs text-slate-800 dark:text-slate-100">{post.title}</h4>
                                   <p className="text-[9px] text-slate-400 mt-1">توسط {postAuthorName} • مبحث: {post.course?.title || "سایر"}</p>
                                 </div>
                                 <div className="flex gap-2 shrink-0">
@@ -1664,7 +1682,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                   </button>
                                   <button 
                                     onClick={() => handleOpenRejectPostModal(post._id)}
-                                    className="px-3 py-1 bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 rounded-lg text-[10px] font-bold cursor-pointer"
+                                    className="px-3 py-1 bg-white dark:bg-slate-800 border border-rose-100 text-rose-500 hover:bg-rose-50 rounded-lg text-[10px] font-bold cursor-pointer"
                                   >
                                     رد مقاله
                                   </button>
@@ -1676,19 +1694,19 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                      <h3 className="font-bold text-xs text-slate-700 mb-4">پست‌های رد شده من (نیاز به بازنگری)</h3>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                      <h3 className="font-bold text-xs text-slate-700 dark:text-slate-200 mb-4">پست‌های رد شده من (نیاز به بازنگری)</h3>
                       <div className="space-y-4">
                         {allPosts.filter(p => p.status === "rejected").length === 0 ? (
                           <p className="text-xs text-slate-400">خوشبختانه هیچ پستی از شما رد نشده است.</p>
                         ) : (
                           allPosts.filter(p => p.status === "rejected").map(post => (
                             <div key={post._id} className="p-4 bg-rose-50 border border-rose-100 rounded-xl space-y-2">
-                              <h5 className="font-bold text-xs text-slate-800">{post.title}</h5>
+                              <h5 className="font-bold text-xs text-slate-800 dark:text-slate-100">{post.title}</h5>
                               <p className="text-[10px] text-rose-700">دلیل رد: {post.rejectionReason || "ذکر نشده"}</p>
                               <button 
                                 onClick={() => handleStartEditPost(post)}
-                                className="px-3 py-1 bg-white border border-rose-200 text-slate-700 hover:text-teal-600 rounded-lg text-[10px] font-bold cursor-pointer"
+                                className="px-3 py-1 bg-white dark:bg-slate-800 border border-rose-200 text-slate-700 dark:text-slate-200 hover:text-teal-600 rounded-lg text-[10px] font-bold cursor-pointer"
                               >
                                 ویرایش و اصلاح
                               </button>
@@ -1701,9 +1719,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
 
                   {/* Account requests list */}
                   {isAdmin && (
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                      <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-                        <h2 className="font-extrabold text-xs text-slate-700">درخواست‌های معلق عضویت نویسندگان</h2>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                      <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                        <h2 className="font-extrabold text-xs text-slate-700 dark:text-slate-200">درخواست‌های معلق عضویت نویسندگان</h2>
                       </div>
                       <div className="divide-y divide-slate-100">
                         {allRequests.filter(r => r.status === "pending").length === 0 ? (
@@ -1712,7 +1730,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           allRequests.filter(r => r.status === "pending").map(req => (
                             <div key={req._id} className="p-4 flex flex-col sm:flex-row justify-between gap-4">
                               <div>
-                                <h4 className="font-bold text-xs text-slate-700">{req.name}</h4>
+                                <h4 className="font-bold text-xs text-slate-700 dark:text-slate-200">{req.name}</h4>
                                 <p className="text-[10px] text-slate-400">{req.email}</p>
                                 <p className="text-[10px] text-slate-500 mt-1 italic">{req.bio || "توضیحاتی ثبت نشده"}</p>
                               </div>
@@ -1725,7 +1743,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                 </button>
                                 <button 
                                   onClick={() => handleRejectRequest(req._id)}
-                                  className="px-3 py-1 bg-white border border-slate-200 text-slate-400 hover:text-rose-500 rounded-lg text-[10px] font-bold cursor-pointer"
+                                  className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 hover:text-rose-500 rounded-lg text-[10px] font-bold cursor-pointer"
                                 >
                                   رد کردن
                                 </button>
@@ -1741,8 +1759,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 {/* Left col: Pending password reset request queue */}
                 {isAdmin && (
                   <div className="space-y-6">
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-                      <h3 className="font-bold text-xs text-slate-700 mb-4 flex items-center justify-between">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6">
+                      <h3 className="font-bold text-xs text-slate-700 dark:text-slate-200 mb-4 flex items-center justify-between">
                         درخواست‌های فراموشی رمز
                         <span className="bg-amber-100 text-amber-700 text-[8px] font-extrabold px-1.5 py-0.5 rounded-full">اقدام فوری</span>
                       </h3>
@@ -1751,8 +1769,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           <p className="text-xs text-slate-400">هیچ درخواست فراموشی رمزی ثبت نشده است.</p>
                         ) : (
                           resetRequests.map(user => (
-                            <div key={user._id} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                              <div className="text-xs font-bold text-slate-700 mb-1">{user.name}</div>
+                            <div key={user._id} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+                              <div className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">{user.name}</div>
                               <div className="text-[10px] text-slate-400">{user.email}</div>
                               <button 
                                 onClick={() => handleApprovePasswordReset(user._id || user.id)}
@@ -1772,8 +1790,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
           ) : activeTab === "posts" ? (
             /* --- POSTS MANAGER --- */
             <div className="space-y-6">
-              <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                <span className="text-xs font-bold text-slate-700">لیست مطالب علمی شما</span>
+              <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">لیست مطالب علمی شما</span>
                 <button 
                   onClick={handleStartNewPost}
                   className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
@@ -1782,10 +1800,10 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 </button>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <table className="w-full text-right text-xs">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
+                    <tr className="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px] uppercase tracking-wider">
                       <th className="px-6 py-4 font-extrabold">عنوان مقاله</th>
                       <th className="px-6 py-4 font-extrabold">مبحث درس</th>
                       <th className="px-6 py-4 font-extrabold">وضعیت انتشار</th>
@@ -1802,8 +1820,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       </tr>
                     ) : (
                       allPosts.map(post => (
-                        <tr key={post._id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-3.5 font-bold text-slate-800">{post.title}</td>
+                        <tr key={post._id} className="hover:bg-slate-50 dark:bg-slate-900/50 transition-colors">
+                          <td className="px-6 py-3.5 font-bold text-slate-800 dark:text-slate-100">{post.title}</td>
                           <td className="px-6 py-3.5 text-slate-400 font-semibold">{post.course?.title || "سایر"}</td>
                           <td className="px-6 py-3.5">
                             {post.status === "published" ? (
@@ -1825,7 +1843,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           <td className="px-6 py-3.5 text-left shrink-0">
                             <button 
                               onClick={() => handleStartEditPost(post)}
-                              className="px-2.5 py-1 bg-white border border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-100 rounded-lg font-bold text-[10px] cursor-pointer"
+                              className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-teal-600 hover:border-teal-100 rounded-lg font-bold text-[10px] cursor-pointer"
                             >
                               ویرایش مجدد
                             </button>
@@ -1841,8 +1859,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             /* --- COURSES MANAGER (ADMIN ONLY) --- */
             <div className="space-y-8">
               {/* Add New Course form */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <h3 className="font-extrabold text-xs text-slate-700 border-r-4 border-teal-500 pr-2">افزودن درس دانشگاهی و آکادمیک جدید</h3>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 border-r-4 border-teal-500 pr-2">افزودن درس دانشگاهی و آکادمیک جدید</h3>
                 <form onSubmit={handleCreateCourse} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
@@ -1852,7 +1870,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         value={newCourseTitle}
                         onChange={(e) => setNewCourseTitle(e.target.value)}
                         placeholder="مثال: دندانپزشکی ترمیمی تخصصی"
-                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                        className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
                         required
                       />
                     </div>
@@ -1863,7 +1881,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         value={newCourseDesc}
                         onChange={(e) => setNewCourseDesc(e.target.value)}
                         placeholder="مثال: اصول و پروتکل‌های پیشرفته ادهزیو دندانی"
-                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                        className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
                       />
                     </div>
                   </div>
@@ -1876,12 +1894,12 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         value={syllabusInput}
                         onChange={(e) => setSyllabusInput(e.target.value)}
                         placeholder="مثال: اصول تراش لمینیت سرامیکی"
-                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                        className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
                       />
                       <button 
                         type="button"
                         onClick={handleAddSyllabusItem}
-                        className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-lg cursor-pointer"
+                        className="px-4 py-2 bg-slate-100 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-lg cursor-pointer"
                       >
                         + افزودن سرفصل
                       </button>
@@ -1915,10 +1933,10 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               </div>
 
               {/* Course lists */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <table className="w-full text-right text-xs">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-400 text-[10px]">
+                    <tr className="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px]">
                       <th className="px-6 py-3.5 font-bold">نام درس</th>
                       <th className="px-6 py-3.5 font-bold">توضیحات</th>
                       <th className="px-6 py-3.5 font-bold">تعداد سرفصل‌ها</th>
@@ -1926,8 +1944,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {allCourses.map(course => (
-                      <tr key={course._id} className="hover:bg-slate-50/50">
-                        <td className="px-6 py-3 font-bold text-slate-800">{course.title}</td>
+                      <tr key={course._id} className="hover:bg-slate-50 dark:bg-slate-900/50">
+                        <td className="px-6 py-3 font-bold text-slate-800 dark:text-slate-100">{course.title}</td>
                         <td className="px-6 py-3 text-slate-400">{course.description || "سرفصل مصوب"}</td>
                         <td className="px-6 py-3 text-teal-600 font-extrabold">{course.syllabus?.length || 0} مبحث مرجع</td>
                       </tr>
@@ -1938,8 +1956,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             </div>
           ) : activeTab === "siteSettings" ? (
             /* --- SITE SETTINGS (ADMIN ONLY) --- */
-            <div className="max-w-2xl bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-              <h3 className="font-extrabold text-xs text-slate-700 mb-6 border-r-4 border-teal-500 pr-2">تنظیمات کلان آکادمی دنتالفای</h3>
+            <div className="max-w-2xl bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+              <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 mb-6 border-r-4 border-teal-500 pr-2">تنظیمات کلان آکادمی دنتالفای</h3>
               <form onSubmit={handleSettingsSubmit} className="space-y-6 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -1948,7 +1966,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       type="text" 
                       value={siteNameInput}
                       onChange={(e) => setSiteNameInput(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1957,7 +1975,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       type="email" 
                       value={contactEmailInput}
                       onChange={(e) => setContactEmailInput(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-left focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-left focus:outline-none focus:border-teal-500"
                       dir="ltr"
                     />
                   </div>
@@ -1969,7 +1987,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     type="text" 
                     value={heroTextInput}
                     onChange={(e) => setHeroTextInput(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
                   />
                 </div>
 
@@ -1980,7 +1998,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       type="text" 
                       value={adminRecoveryCodeInput}
                       onChange={(e) => setAdminRecoveryCodeInput(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-center focus:outline-none focus:border-teal-500 text-rose-500 font-mono"
+                      className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold text-center focus:outline-none focus:border-teal-500 text-rose-500 font-mono"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1990,22 +2008,22 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       value={adminPasswordInput}
                       onChange={(e) => setAdminPasswordInput(e.target.value)}
                       placeholder="رمز جدید را وارد کنید..."
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-teal-500"
+                      className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs focus:outline-none focus:border-teal-500"
                     />
                   </div>
                 </div>
 
                 {/* Color definitions */}
-                <div className="space-y-2.5 border-t border-slate-100 pt-4">
-                  <span className="font-bold text-slate-600 block mb-2">شخصی‌سازی کدهای رنگی کلینیک</span>
-                  <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2.5 border-t border-slate-100 dark:border-slate-800 pt-4">
+                  <span className="font-bold text-slate-600 dark:text-slate-300 block mb-2">شخصی‌سازی کدهای رنگی کلینیک</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1 text-center">
                       <span className="text-[9px] text-slate-400 font-bold">رنگ فیروزه‌ای</span>
                       <input 
                         type="color" 
                         value={primaryColorInput}
                         onChange={(e) => setPrimaryColorInput(e.target.value)}
-                        className="w-full h-8 rounded border border-slate-200 cursor-pointer"
+                        className="w-full h-8 rounded border border-slate-200 dark:border-slate-700 cursor-pointer"
                       />
                     </div>
                     <div className="space-y-1 text-center">
@@ -2014,7 +2032,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         type="color" 
                         value={secondaryColorInput}
                         onChange={(e) => setSecondaryColorInput(e.target.value)}
-                        className="w-full h-8 rounded border border-slate-200 cursor-pointer"
+                        className="w-full h-8 rounded border border-slate-200 dark:border-slate-700 cursor-pointer"
                       />
                     </div>
                     <div className="space-y-1 text-center">
@@ -2023,7 +2041,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         type="color" 
                         value={clinicalBlueInput}
                         onChange={(e) => setClinicalBlueInput(e.target.value)}
-                        className="w-full h-8 rounded border border-slate-200 cursor-pointer"
+                        className="w-full h-8 rounded border border-slate-200 dark:border-slate-700 cursor-pointer"
                       />
                     </div>
                   </div>
@@ -2040,28 +2058,28 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
           ) : activeTab === "comments" ? (
             /* --- COMMENTS & QUESTIONS MODERATION TAB --- */
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <h3 className="font-extrabold text-xs text-slate-700 border-r-4 border-teal-500 pr-2">مدیریت و پاسخ‌دهی به پرسش‌های بالینی دندانپزشکی</h3>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 border-r-4 border-teal-500 pr-2">مدیریت و پاسخ‌دهی به پرسش‌های بالینی دندانپزشکی</h3>
                 <p className="text-slate-400 text-[10px] leading-relaxed">پزشکان همکار و مدیران علمی می‌توانند به صورت کاملاً زنده به پرسش‌های دانشجویان، رزیدنت‌ها و مراجعین پاسخ تخصصی ارسال نمایند.</p>
               </div>
 
               <div className="space-y-4">
                 {allComments.length === 0 ? (
-                  <div className="bg-white p-8 text-center rounded-2xl border border-slate-200 text-slate-400 text-xs font-semibold">
+                  <div className="bg-white dark:bg-slate-800 p-8 text-center rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-400 text-xs font-semibold">
                     هیچ پرسش بالینی یافت نشد.
                   </div>
                 ) : (
                   allComments.map(comment => {
                     const linkedPost = allPosts.find(p => p._id === comment.postId);
                     return (
-                      <div key={comment._id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <div key={comment._id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                           <div className="flex items-center gap-2">
                             <span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-extrabold text-xs flex items-center justify-center">
                               {comment.name[0]}
                             </span>
                             <div>
-                              <h4 className="font-extrabold text-xs text-slate-700">{comment.name} ({comment.email})</h4>
+                              <h4 className="font-extrabold text-xs text-slate-700 dark:text-slate-200">{comment.name} ({comment.email})</h4>
                               <span className="text-[9px] text-slate-400 font-mono">
                                 ثبت شده در تاریخ {new Date(comment.createdAt).toLocaleDateString("fa-IR")}
                               </span>
@@ -2069,7 +2087,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           </div>
                           <div className="flex items-center gap-2">
                             {linkedPost && (
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 dark:text-slate-300">
                                 مربوط به مقاله: {linkedPost.title}
                               </span>
                             )}
@@ -2083,7 +2101,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           </div>
                         </div>
 
-                        <p className="text-xs text-slate-600 leading-relaxed pr-10 whitespace-pre-line">{comment.text}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pr-10 whitespace-pre-line">{comment.text}</p>
 
                         {/* Existing reply display */}
                         {comment.reply ? (
@@ -2099,12 +2117,12 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                   value={replyTextInput}
                                   onChange={(e) => setReplyTextInput(e.target.value)}
                                   placeholder="پاسخ تخصصی دندانپزشکی خود را بنویسید..."
-                                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 h-20 resize-none"
+                                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 h-20 resize-none"
                                 />
                                 <div className="flex gap-2 justify-end">
                                   <button 
                                     onClick={() => setReplyCommentId(null)}
-                                    className="px-3 py-1.5 bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-lg text-[10px] font-bold cursor-pointer"
+                                    className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:bg-slate-900 rounded-lg text-[10px] font-bold cursor-pointer"
                                   >
                                     انصراف
                                   </button>
@@ -2135,13 +2153,13 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
           ) : activeTab === "requests" ? (
             /* --- WRITER REGISTRATION REQUESTS TAB (ADMIN ONLY) --- */
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <h3 className="font-extrabold text-xs text-slate-700 border-r-4 border-teal-500 pr-2">مدیریت درخواست‌های نویسندگی و عضویت متخصصین</h3>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 border-r-4 border-teal-500 pr-2">مدیریت درخواست‌های نویسندگی و عضویت متخصصین</h3>
                 <p className="text-slate-400 text-[10px] leading-relaxed">درخواست‌های معلق پزشکان، دندانپزشکان و متخصصینی که تقاضای عضویت در تیم نویسندگان دنتالفای را ثبت کرده‌اند در این بخش نمایش داده می‌شود. تایید هر درخواست به طور خودکار اکانت نویسندگی فعال برای ایشان صادر می‌نماید.</p>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <span className="text-[10px] uppercase font-black text-slate-500">لیست کلی درخواست‌ها</span>
                   <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-2 py-0.5 rounded-full">{allRequests.length} درخواست ثبت شده</span>
                 </div>
@@ -2150,10 +2168,10 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     <div className="p-12 text-center text-xs text-slate-400 font-semibold">هیچ درخواستی در سامانه ثبت نشده است.</div>
                   ) : (
                     allRequests.map(req => (
-                      <div key={req._id} className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50/40 transition-colors">
+                      <div key={req._id} className="p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:bg-slate-50 dark:bg-slate-900/40 transition-colors">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-extrabold text-xs text-slate-800">{req.name}</h4>
+                            <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100">{req.name}</h4>
                             <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${
                               req.status === "pending" ? "bg-amber-100 text-amber-700" :
                               req.status === "approved" ? "bg-teal-100 text-teal-700" :
@@ -2165,7 +2183,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                             </span>
                           </div>
                           <p className="text-[10px] text-slate-400 font-mono">{req.email}</p>
-                          <div className="text-[10px] text-slate-500 mt-2 bg-slate-50 p-3 rounded-xl border border-slate-100 italic max-w-xl">
+                          <div className="text-[10px] text-slate-500 mt-2 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-800 italic max-w-xl">
                             {req.bio || "بیوگرافی یا توضیحات علمی ارائه نشده است."}
                           </div>
                         </div>
@@ -2180,7 +2198,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                             </button>
                             <button 
                               onClick={() => handleRejectRequest(req._id)}
-                              className="px-3.5 py-1.5 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-500 hover:text-rose-600 rounded-xl text-[10px] font-bold cursor-pointer transition-all"
+                              className="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-rose-50 border border-slate-200 dark:border-slate-700 hover:border-rose-200 text-slate-500 hover:text-rose-600 rounded-xl text-[10px] font-bold cursor-pointer transition-all"
                             >
                               رد درخواست
                             </button>
@@ -2196,10 +2214,10 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             /* --- LIBRARY AND FAQS MANAGEMENT TAB (ADMIN ONLY) --- */
             <div className="space-y-8">
               {/* Clinical Library Manager */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-                <h3 className="font-extrabold text-xs text-slate-700 border-r-4 border-teal-500 pr-2">مدیریت کتابخانه بالینی و اسناد مطب</h3>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+                <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 border-r-4 border-teal-500 pr-2">مدیریت کتابخانه بالینی و اسناد مطب</h3>
                 
-                <form onSubmit={handleCreateLibraryDoc} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 items-end">
+                <form onSubmit={handleCreateLibraryDoc} className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800 items-end">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500">عنوان سند / فرم پزشکی</label>
                     <input 
@@ -2207,13 +2225,13 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       value={newLibraryTitle}
                       onChange={(e) => setNewLibraryTitle(e.target.value)}
                       placeholder="مثال: چک‌لیست استریلیزاسیون اتوکلاو"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
                       required
                     />
                   </div>
                   <div className="space-y-1 relative">
                     <label className="text-[10px] font-bold text-slate-500">فایل ضمیمه سند (PDF)</label>
-                    <div className="w-full h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center relative hover:bg-slate-50 cursor-pointer overflow-hidden">
+                    <div className="w-full h-9 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center relative hover:bg-slate-50 dark:bg-slate-900 cursor-pointer overflow-hidden">
                       <input 
                         type="file" 
                         accept=".pdf"
@@ -2241,7 +2259,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     allLibraryDocs.map(doc => (
                       <div key={doc._id} className="py-3 flex items-center justify-between">
                         <div>
-                          <h4 className="font-extrabold text-xs text-slate-700">{doc.title}</h4>
+                          <h4 className="font-extrabold text-xs text-slate-700 dark:text-slate-200">{doc.title}</h4>
                           <span className="text-[9px] text-slate-400 font-mono">{doc.size || "1.0 MB"} • فرمت PDF</span>
                         </div>
                         <button 
@@ -2258,10 +2276,10 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               </div>
 
               {/* FAQ Manager */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-                <h3 className="font-extrabold text-xs text-slate-700 border-r-4 border-teal-500 pr-2">مدیریت سوالات متداول دانشجویان و دندانپزشکان</h3>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+                <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 border-r-4 border-teal-500 pr-2">مدیریت سوالات متداول دانشجویان و دندانپزشکان</h3>
                 
-                <form onSubmit={handleCreateFAQ} className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <form onSubmit={handleCreateFAQ} className="space-y-4 bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500">متن سوال (Question)</label>
                     <input 
@@ -2269,7 +2287,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       value={newFaqQuestion}
                       onChange={(e) => setNewFaqQuestion(e.target.value)}
                       placeholder="چه موضوعاتی در دنتالفای بررسی می‌شوند؟"
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs"
                       required
                     />
                   </div>
@@ -2279,7 +2297,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       value={newFaqAnswer}
                       onChange={(e) => setNewFaqAnswer(e.target.value)}
                       placeholder="پاسخ کوتاه و علمی متناسب را درج کنید..."
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs h-16 resize-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs h-16 resize-none"
                       required
                     />
                   </div>
@@ -2300,7 +2318,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     allFaqs.map(faq => (
                       <div key={faq._id} className="py-4 space-y-1">
                         <div className="flex items-start justify-between">
-                          <h4 className="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                          <h4 className="font-bold text-xs text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                             <HelpCircle className="w-4 h-4 text-teal-600" />
                             {faq.question}
                           </h4>
@@ -2319,19 +2337,19 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 </div>
               </div>
             </div>
-          ) : activeTab === ("writers" as any) ? (
-            /* --- WRITERS MANAGEMENT TAB --- */
+          ) : activeTab === ("users" as any) ? (
+            /* --- USERS MANAGEMENT TAB --- */
             <div className="space-y-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                <h3 className="font-extrabold text-xs text-slate-700 border-r-4 border-teal-500 pr-2">لیست نویسندگان و همکاران علمی آکادمی</h3>
-                <p className="text-[11px] text-slate-400">در این بخش می‌توانید حساب‌های کاربری نویسندگان را مدیریت، تعلیق یا رمز عبور آن‌ها را به صورت دستی تغییر دهید.</p>
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 border-r-4 border-teal-500 pr-2">لیست کاربران (نویسندگان و دانشجویان)</h3>
+                <p className="text-[11px] text-slate-400">در این بخش می‌توانید حساب‌های کاربری را مشاهده و مدیریت کنید.</p>
               </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
                 <table className="w-full text-right text-xs">
                   <thead>
-                    <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
-                      <th className="px-6 py-4 font-extrabold">پزشک / نویسنده</th>
+                    <tr className="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px] uppercase tracking-wider">
+                      <th className="px-6 py-4 font-extrabold">نام کاربر</th>
                       <th className="px-6 py-4 font-extrabold">ایمیل</th>
                       <th className="px-6 py-4 font-extrabold">وضعیت حساب</th>
                       <th className="px-6 py-4 font-extrabold">نقش سیستم</th>
@@ -2339,17 +2357,17 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {allUsers.filter(u => u.role === "author").length === 0 ? (
+                    {allUsers.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="p-8 text-center text-slate-400 text-xs">
-                          هیچ نویسنده‌ای یافت نشد.
+                          هیچ کاربری یافت نشد.
                         </td>
                       </tr>
                     ) : (
-                      allUsers.filter(u => u.role === "author").map(user => (
-                        <tr key={user._id || user.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-3.5 flex items-center gap-3 font-bold text-slate-800">
-                            <img src={user.profilePicture || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200"} className="w-8 h-8 rounded-full object-cover border border-slate-200" alt={user.name} />
+                      allUsers.map(user => (
+                        <tr key={user._id || user.id} className="hover:bg-slate-50 dark:bg-slate-900/50 transition-colors">
+                          <td className="px-6 py-3.5 flex items-center gap-3 font-bold text-slate-800 dark:text-slate-100">
+                            <img src={user.profilePicture || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200"} className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700" alt={user.name} />
                             <span>{user.name}</span>
                           </td>
                           <td className="px-6 py-3.5 text-slate-400 font-semibold">{user.email}</td>
@@ -2360,7 +2378,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                               <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md font-bold text-[10px]">فعال</span>
                             )}
                           </td>
-                          <td className="px-6 py-3.5 text-slate-500 font-bold uppercase text-[10px]">نویسنده علمی</td>
+                          <td className="px-6 py-3.5 text-slate-500 font-bold uppercase text-[10px]">{user.role === 'author' ? 'نویسنده علمی' : user.role === 'admin' ? 'مدیر سیستم' : 'دانشجو'}</td>
                           <td className="px-6 py-3.5 text-left shrink-0">
                             <div className="flex gap-2 justify-end">
                               <button 
@@ -2368,7 +2386,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                   setSelectedUserToChangePassword(user);
                                   setNewPasswordForUser("");
                                 }}
-                                className="px-2.5 py-1 bg-white border border-slate-200 text-slate-600 hover:text-teal-600 hover:border-teal-100 rounded-lg font-bold text-[10px] cursor-pointer"
+                                className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-teal-600 hover:border-teal-100 rounded-lg font-bold text-[10px] cursor-pointer"
                               >
                                 تغییر دستی رمز
                               </button>
@@ -2413,7 +2431,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                                       alert("خطا در ارتباط با سرور");
                                     }
                                   }}
-                                  className="px-2.5 py-1 bg-white border border-rose-100 text-rose-500 hover:bg-rose-50 rounded-lg font-bold text-[10px] cursor-pointer"
+                                  className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-rose-100 text-rose-500 hover:bg-rose-50 rounded-lg font-bold text-[10px] cursor-pointer"
                                 >
                                   تعلیق موقت حساب
                                 </button>
@@ -2452,8 +2470,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             </div>
           ) : (
             /* --- PROFILE TAB --- */
-            <div className="max-w-xl bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-6">
-              <h3 className="font-extrabold text-xs text-slate-700 border-r-4 border-teal-500 pr-2">تنظیمات امنیتی و پروفایل من</h3>
+            <div className="max-w-xl bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm space-y-6">
+              <h3 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 border-r-4 border-teal-500 pr-2">تنظیمات امنیتی و پروفایل من</h3>
               
               <form onSubmit={handleProfileSubmit} className="space-y-6 text-xs">
                 
@@ -2464,7 +2482,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     value={profileNameInput}
                     onChange={(e) => setProfileNameInput(e.target.value)}
                     placeholder="مثال: دکتر علیرضا رضایی"
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold"
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold"
                     required
                   />
                 </div>
@@ -2476,7 +2494,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     value={profileEmailInput}
                     onChange={(e) => setProfileEmailInput(e.target.value)}
                     placeholder="example@dentalfy.ir"
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-left font-mono"
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-left font-mono"
                     dir="ltr"
                     required
                   />
@@ -2492,7 +2510,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     <div 
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => handleFileChange(e, "profile")}
-                      className="flex-1 border border-dashed border-slate-200 hover:border-teal-500 p-4 text-center rounded-xl bg-slate-50 cursor-pointer relative transition-colors"
+                      className="flex-1 border border-dashed border-slate-200 dark:border-slate-700 hover:border-teal-500 p-4 text-center rounded-xl bg-slate-50 dark:bg-slate-900 cursor-pointer relative transition-colors"
                     >
                       <input 
                         type="file" 
@@ -2501,7 +2519,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         className="absolute inset-0 opacity-0 cursor-pointer"
                       />
                       <Upload className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-                      <span className="font-bold text-slate-600 block text-[11px]">بکشید و رها کنید یا کلیک کنید</span>
+                      <span className="font-bold text-slate-600 dark:text-slate-300 block text-[11px]">بکشید و رها کنید یا کلیک کنید</span>
                       <span className="text-[9px] text-slate-400">ذخیره ایمن به عنوان فایل تصویر</span>
                     </div>
                   </div>
@@ -2513,7 +2531,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       value={profilePicLinkInput}
                       onChange={(e) => setProfilePicLinkInput(e.target.value)}
                       placeholder="https://example.com/avatar.jpg"
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-left font-mono"
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-left font-mono"
                       dir="ltr"
                     />
                   </div>
@@ -2526,7 +2544,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     value={profilePasswordInput}
                     onChange={(e) => setProfilePasswordInput(e.target.value)}
                     placeholder="کلمه عبور جدید را وارد کنید..."
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs"
                   />
                 </div>
 
@@ -2548,7 +2566,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
         </div>
 
         {/* Footer Branding of Admin Console */}
-        <footer className="h-12 bg-white border-t border-slate-200 px-8 flex items-center justify-between shrink-0 text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
+        <footer className="h-12 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-8 flex items-center justify-between shrink-0 text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
           <span>RMO Cloud Management Node ID: dntlf-srv-2026</span>
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> SYSTEM: ONLINE
@@ -2559,14 +2577,14 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
       {/* Rejection Modal */}
       {rejectionModalPostId && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <h4 className="font-extrabold text-sm text-slate-800">توضیح بازخورد عدم تایید مقاله</h4>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-100">توضیح بازخورد عدم تایید مقاله</h4>
             <p className="text-[11px] text-slate-400 leading-relaxed">لطفاً دلیل علمی، بالینی یا ساختاری رد این پست را با جزئیات بنویسید تا نویسنده برای انتشار مجدد اصلاح کند.</p>
             <textarea 
               value={rejectionReasonInput}
               onChange={(e) => setRejectionReasonInput(e.target.value)}
               placeholder="مثال: لزوم استفاده از تصاویر تراش دندان با وضوح بالاتر..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs h-24 focus:outline-none focus:border-rose-500"
+              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs h-24 focus:outline-none focus:border-rose-500"
             />
             <div className="flex gap-2">
               <button 
@@ -2577,7 +2595,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               </button>
               <button 
                 onClick={() => setRejectionModalPostId(null)}
-                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
               >
                 انصراف
               </button>
@@ -2586,29 +2604,44 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
         </div>
       )}
 
-      {/* Approval Password Modal */}
-      {approvalPasswordModal && approvalPasswordModal.isOpen && (
+      {/* Request Action Modal */}
+      {requestActionModal && requestActionModal.isOpen && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-sm w-full p-6 space-y-4 shadow-2xl text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2">
-              <CheckCircle className="w-6 h-6" />
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2 ${requestActionModal.action === "approve" ? "bg-teal-50 text-teal-600" : "bg-rose-50 text-rose-600"}`}>
+              {requestActionModal.action === "approve" ? <CheckCircle className="w-6 h-6" /> : <XCircle className="w-6 h-6" />}
             </div>
-            <h4 className="font-extrabold text-sm text-slate-800">حساب کاربری با موفقیت تأیید شد</h4>
-            <p className="text-[11px] text-slate-500">رمز عبور موقت برای {approvalPasswordModal.name || "کاربر"} ایجاد شد:</p>
+            <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-100 text-center">
+              {requestActionModal.action === "approve" ? "تأیید درخواست عضویت هیئت علمی" : "رد درخواست عضویت هیئت علمی"}
+            </h4>
+            <p className="text-[11px] text-slate-500 text-center">
+              {requestActionModal.action === "approve" ? "آیا از تأیید این درخواست مطمئن هستید؟ یک ایمیل حاوی پیام شما ارسال خواهد شد." : "آیا از رد این درخواست مطمئن هستید؟ ایمیل اطلاع‌رسانی ارسال خواهد شد."}
+            </p>
             
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 font-mono text-center">
-              <div className="text-[11px] text-slate-400 font-sans mb-1">رمز عبور موقت:</div>
-              <div className="text-lg font-black text-emerald-600 select-all tracking-wider">{approvalPasswordModal.password}</div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-slate-600 dark:text-slate-300 block">پیام شما برای نویسنده (در ایمیل قرار می‌گیرد)</label>
+              <textarea 
+                value={requestActionModal.message}
+                onChange={(e) => setRequestActionModal({ ...requestActionModal, message: e.target.value })}
+                placeholder={requestActionModal.action === "approve" ? "همکار گرامی، عضویت شما تایید شد..." : "متاسفانه امکان تایید وجود ندارد..."}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs min-h-[80px]"
+              />
             </div>
 
-            <p className="text-[10px] text-slate-400">لطفاً این رمز عبور را کپی کرده و به نویسنده اطلاع دهید.</p>
-
-            <button 
-              onClick={() => setApprovalPasswordModal(null)}
-              className="w-full py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl cursor-pointer"
-            >
-              متوجه شدم و رمز را کپی کردم
-            </button>
+            <div className="flex gap-2 pt-2">
+              <button 
+                onClick={submitRequestAction}
+                className={`flex-1 py-2 text-white text-xs font-bold rounded-xl cursor-pointer ${requestActionModal.action === "approve" ? "bg-teal-600 hover:bg-teal-700" : "bg-rose-500 hover:bg-rose-600"}`}
+              >
+                تأیید نهایی و ارسال ایمیل
+              </button>
+              <button 
+                onClick={() => setRequestActionModal(null)}
+                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+              >
+                انصراف
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2616,17 +2649,17 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
       {/* Change Password Modal for Admin */}
       {selectedUserToChangePassword && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <h4 className="font-extrabold text-sm text-slate-800">تغییر دستی رمز عبور</h4>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <h4 className="font-extrabold text-sm text-slate-800 dark:text-slate-100">تغییر دستی رمز عبور</h4>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              تغییر رمز عبور نویسنده: <strong className="text-slate-700">{selectedUserToChangePassword.name}</strong> ({selectedUserToChangePassword.email})
+              تغییر رمز عبور نویسنده: <strong className="text-slate-700 dark:text-slate-200">{selectedUserToChangePassword.name}</strong> ({selectedUserToChangePassword.email})
             </p>
             <input 
               type="text" 
               value={newPasswordForUser}
               onChange={(e) => setNewPasswordForUser(e.target.value)}
               placeholder="رمز عبور جدید (حداقل ۴ کاراکتر)..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+              className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500"
             />
             <div className="flex gap-2">
               <button 
@@ -2663,7 +2696,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   setSelectedUserToChangePassword(null);
                   setNewPasswordForUser("");
                 }}
-                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer"
+                className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
               >
                 انصراف
               </button>

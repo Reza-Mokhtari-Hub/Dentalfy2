@@ -58,20 +58,20 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans py-8 px-4" dir="rtl">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans py-8 px-4" dir="rtl">
       <div className="max-w-3xl mx-auto space-y-8">
         {/* Back Button & Navigation */}
         <button 
           onClick={onBack}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-teal-700 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-teal-700 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
         >
           <ArrowRight className="w-4 h-4" /> بازگشت به صفحه اصلی
         </button>
 
         {/* Article Container */}
-        <article className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
+        <article className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl overflow-hidden">
           {/* Cover & Category Banner */}
-          <div className="bg-gradient-to-l from-teal-50 to-sky-50 px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="bg-gradient-to-l from-teal-50 to-sky-50 px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <span className="text-xs font-bold text-teal-700 bg-teal-100/60 px-3 py-1.5 rounded-lg self-start">
               {courseTitle}
             </span>
@@ -85,12 +85,12 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
 
           <div className="p-8 md:p-12 space-y-8">
             {/* Header / Title */}
-            <h1 className="text-2xl md:text-4xl font-black text-slate-800 leading-snug">
+            <h1 className="text-2xl md:text-4xl font-black text-slate-800 dark:text-slate-100 leading-snug">
               {post.title}
             </h1>
 
             {/* Author details card */}
-            <div className="flex items-center gap-3.5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-3.5 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
               <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-teal-500 bg-slate-200 shadow-sm">
                 <img 
                   src={authorPic || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=150"} 
@@ -100,26 +100,26 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                 />
               </div>
               <div>
-                <h4 className="font-extrabold text-sm text-slate-700">{authorName}</h4>
+                <h4 className="font-extrabold text-sm text-slate-700 dark:text-slate-200">{authorName}</h4>
                 <p className="text-[10px] text-slate-400 font-mono mt-0.5">{authorEmail || "نویسنده تأیید شده علمی دنتالفای"}</p>
               </div>
             </div>
 
             {/* Content block-by-block renderer */}
-            <div className="space-y-6 text-slate-700 text-sm md:text-base leading-relaxed">
+            <div className="space-y-6 text-slate-700 dark:text-slate-200 text-sm md:text-base leading-relaxed">
               {post.content && post.content.map((block) => {
                 switch (block.type) {
                   case "heading": {
                     const hVal = block.value && typeof block.value === "object" ? block.value : { text: block.value || "", level: "h2" };
                     if (hVal.level === "h3") {
                       return (
-                        <h4 key={block.id} className="text-base md:text-lg font-black text-slate-800 pt-3 border-r-4 border-emerald-500 pr-2.5">
+                        <h4 key={block.id} className="text-base md:text-lg font-black text-slate-800 dark:text-slate-100 pt-3 border-r-4 border-emerald-500 pr-2.5">
                           {hVal.text}
                         </h4>
                       );
                     }
                     return (
-                      <h3 key={block.id} className="text-lg md:text-xl font-bold text-slate-800 pt-4 border-r-4 border-teal-500 pr-3">
+                      <h3 key={block.id} className="text-lg md:text-xl font-bold text-slate-800 dark:text-slate-100 pt-4 border-r-4 border-teal-500 pr-3">
                         {hVal.text}
                       </h3>
                     );
@@ -128,7 +128,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                   case "text": {
                     const tText = typeof block.value === "object" ? (block.value?.text || "") : (block.value || "");
                     return (
-                      <p key={block.id} className="whitespace-pre-line text-slate-600 font-normal leading-loose">
+                      <p key={block.id} className="whitespace-pre-line text-slate-600 dark:text-slate-300 font-normal leading-loose">
                         {tText}
                       </p>
                     );
@@ -154,7 +154,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                     return (
                       <div key={block.id} className="my-4 pr-4">
                         {lVal.listType === "ordered" ? (
-                          <ol className="space-y-2.5 list-decimal text-slate-600 pr-5 text-xs md:text-sm">
+                          <ol className="space-y-2.5 list-decimal text-slate-600 dark:text-slate-300 pr-5 text-xs md:text-sm">
                             {lVal.items.map((item: string, idx: number) => (
                               <li key={idx} className="leading-relaxed font-semibold">
                                 <span>{item}</span>
@@ -164,7 +164,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                         ) : (
                           <ul className="space-y-2.5">
                             {lVal.items.map((item: string, idx: number) => (
-                              <li key={idx} className="flex items-start gap-2 text-slate-600 text-xs md:text-sm">
+                              <li key={idx} className="flex items-start gap-2 text-slate-600 dark:text-slate-300 text-xs md:text-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-teal-500 mt-2 shrink-0"></span>
                                 <span className="leading-relaxed font-semibold">{item}</span>
                               </li>
@@ -179,7 +179,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                     const iVal = block.value && typeof block.value === "object" ? block.value : { url: block.value || "", caption: "" };
                     return (
                       <div key={block.id} className="my-6 space-y-2 text-center">
-                        <div className="rounded-2xl border border-slate-100 overflow-hidden shadow-md max-h-[400px] bg-slate-100 flex items-center justify-center">
+                        <div className="rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-md max-h-[400px] bg-slate-100 flex items-center justify-center">
                           <img 
                             src={iVal.url} 
                             alt={iVal.caption || "تصویر ضمیمه درمان دندان"} 
@@ -197,7 +197,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                     const isEmbed = vVal.url && (vVal.url.includes("youtube.com") || vVal.url.includes("aparat.com") || vVal.url.includes("embed"));
                     return (
                       <div key={block.id} className="my-6 space-y-2">
-                        <div className="rounded-2xl border border-slate-100 overflow-hidden shadow-md bg-slate-950 aspect-video relative">
+                        <div className="rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-md bg-slate-950 aspect-video relative">
                           {isEmbed ? (
                             <iframe
                               src={vVal.url}
@@ -221,13 +221,13 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                   case "pdf": {
                     const pVal = block.value && typeof block.value === "object" ? block.value : { url: block.value || "", name: "فایل راهنمای بالینی دندانپزشکی" };
                     return (
-                      <div key={block.id} className="my-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                      <div key={block.id} className="my-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
                             <FileText className="w-5 h-5" />
                           </div>
                           <div>
-                            <h5 className="font-bold text-xs text-slate-700">{pVal.name || "سند پی‌دی‌اف مرجع"}</h5>
+                            <h5 className="font-bold text-xs text-slate-700 dark:text-slate-200">{pVal.name || "سند پی‌دی‌اف مرجع"}</h5>
                             <p className="text-[9px] text-slate-400 font-mono">پیوست علمی پست دنتالفای</p>
                           </div>
                         </div>
@@ -241,7 +241,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                             e.preventDefault();
                             alert("دریافت سند علمی ضمیمه شده...");
                           }}
-                          className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                          className="px-4 py-2 bg-white dark:bg-slate-800 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <Download className="w-4.5 h-4.5" /> دانلود پیوست
                         </a>
@@ -252,9 +252,9 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                   case "divider":
                     return (
                       <div key={block.id} className="py-6 flex items-center justify-center">
-                        <div className="w-full border-t border-dashed border-slate-200"></div>
+                        <div className="w-full border-t border-dashed border-slate-200 dark:border-slate-700"></div>
                         <span className="px-4 text-[9px] font-bold text-slate-300 uppercase tracking-wider">جداکننده مباحث</span>
-                        <div className="w-full border-t border-dashed border-slate-200"></div>
+                        <div className="w-full border-t border-dashed border-slate-200 dark:border-slate-700"></div>
                       </div>
                     );
 
@@ -268,15 +268,15 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
 
         {/* Syllabus / Course Syllabus recommendation */}
         {post.course && typeof post.course === "object" && post.course.syllabus && (
-          <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-lg space-y-4">
-            <h3 className="font-black text-slate-800 text-base flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-lg space-y-4">
+            <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-teal-600" />
               سرفصل علمی این درس ({post.course.title})
             </h3>
             <p className="text-slate-400 text-xs">{post.course.description}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               {post.course.syllabus.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs font-semibold text-slate-600">
+                <div key={idx} className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 text-xs font-semibold text-slate-600 dark:text-slate-300">
                   <span className="w-5 h-5 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center font-mono font-bold text-[10px]">
                     {idx + 1}
                   </span>
@@ -288,8 +288,8 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
         )}
 
         {/* Comments Section */}
-        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-lg space-y-6">
-          <h3 className="font-black text-slate-800 text-base flex items-center gap-2">
+        <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-lg space-y-6">
+          <h3 className="font-black text-slate-800 dark:text-slate-100 text-base flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-teal-600" />
             پرسش‌ها و نظرات بالینی دندانپزشکی ({comments.length})
           </h3>
@@ -304,7 +304,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                   value={commentName} 
                   onChange={(e) => setCommentName(e.target.value)} 
                   placeholder="مثال: دکتر سارا احمدی" 
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500"
                   required
                 />
               </div>
@@ -315,7 +315,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                   value={commentEmail} 
                   onChange={(e) => setCommentEmail(e.target.value)} 
                   placeholder="name@example.com" 
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-left focus:outline-none focus:border-teal-500 font-mono"
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-left focus:outline-none focus:border-teal-500 font-mono"
                   dir="ltr"
                   required
                 />
@@ -328,7 +328,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                 value={commentText} 
                 onChange={(e) => setCommentText(e.target.value)} 
                 placeholder="سوال، بازخورد یا ابهام بالینی خود درباره این مقاله را بنویسید..." 
-                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 h-24 resize-none"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 h-24 resize-none"
                 required
               />
             </div>
@@ -350,19 +350,19 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
           </form>
 
           {/* Comments List */}
-          <div className="space-y-4 pt-4 border-t border-slate-100">
+          <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
             {comments.length === 0 ? (
               <p className="text-center text-xs text-slate-400 py-4 font-semibold">تاکنون پرسشی برای این مقاله مطرح نشده است. اولین نفری باشید که سوال می‌پرسد!</p>
             ) : (
               comments.map((comment) => (
-                <div key={comment._id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-3">
+                <div key={comment._id} className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center font-extrabold text-xs">
                         {comment.name[0]}
                       </div>
                       <div>
-                        <h5 className="font-extrabold text-xs text-slate-700">{comment.name}</h5>
+                        <h5 className="font-extrabold text-xs text-slate-700 dark:text-slate-200">{comment.name}</h5>
                         <span className="text-[9px] text-slate-400 font-mono">{new Date(comment.createdAt).toLocaleDateString("fa-IR")}</span>
                       </div>
                     </div>
@@ -372,7 +372,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-600 pr-10 leading-relaxed whitespace-pre-line">{comment.text}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 pr-10 leading-relaxed whitespace-pre-line">{comment.text}</p>
 
                   {/* Replied Thread */}
                   {comment.reply && (

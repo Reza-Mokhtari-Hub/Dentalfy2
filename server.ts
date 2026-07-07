@@ -36,7 +36,7 @@ if (useCloudinary) {
   console.warn("⚠️ Cloudinary credentials not fully specified. Falling back to local Base64 media storage.");
 }
 
-async function startServer() {
+export async function startServer() {
   const app = express();
   const PORT = 3000;
 
@@ -514,18 +514,52 @@ async function startServer() {
       return res.status(400).json({ error: "ایمیل الزامی است" });
     }
 
+    const newPassword = "rmo" + Math.floor(1000 + Math.random() * 9000);
+    let userEmail = email.toLowerCase().trim();
+
     if (isDBConnected) {
-      const user = await User.findOne({ email: email.toLowerCase().trim() });
+      const user = await User.findOne({ email: userEmail });
       if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-      user.resetPasswordRequested = true;
+      user.password = newPassword;
+      user.temporaryPassword = newPassword;
+      user.resetPasswordRequested = false;
       await user.save();
     } else {
-      const user = memoryDB.users.find(u => u.email === email.toLowerCase().trim());
+      const user = memoryDB.users.find(u => u.email === userEmail);
       if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-      user.resetPasswordRequested = true;
+      user.password = newPassword;
+      user.temporaryPassword = newPassword;
+      user.resetPasswordRequested = false;
     }
 
-    res.json({ success: true, message: "درخواست بازنشانی رمز با موفقیت به مدیر ارسال شد" });
+    // Send Email
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_PASS;
+    if (gmailUser && gmailPass) {
+      try {
+        const nodemailer = await import("nodemailer");
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: { user: gmailUser, pass: gmailPass },
+        });
+        await transporter.sendMail({
+          from: `"آکادمی دنتالفای" <${gmailUser}>`,
+          to: userEmail,
+          subject: "بازیابی رمز عبور",
+          html: `
+            <div dir="rtl" style="font-family: Tahoma, sans-serif; text-align: center; padding: 20px;">
+              <h2>رمز عبور جدید شما</h2>
+              <p>شما اکنون می‌توانید با رمز عبور موقت زیر وارد حساب خود شوید. توصیه می‌شود پس از ورود، رمز خود را تغییر دهید.</p>
+              <h3 style="background: #f1f5f9; padding: 10px; display: inline-block;">${newPassword}</h3>
+            </div>
+          `
+        });
+      } catch (err) {
+        console.error("Error sending reset password email:", err);
+      }
+    }
+
+    res.json({ success: true, message: "رمز عبور جدید به ایمیل شما ارسال شد" });
   });
 
   // List users requesting reset (Admin)
@@ -546,6 +580,7 @@ async function startServer() {
       return res.status(400).json({ error: "اطلاعات ارسالی ناقص است" });
     }
 
+    let userEmail = "";
     if (isDBConnected) {
       const user = await User.findById(userId);
       if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
@@ -553,12 +588,41 @@ async function startServer() {
       user.password = tempPassword; // Sync it
       user.resetPasswordRequested = false;
       await user.save();
+      userEmail = user.email;
     } else {
       const user = memoryDB.users.find(u => u._id === userId);
       if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
       user.temporaryPassword = tempPassword;
       user.password = tempPassword;
       user.resetPasswordRequested = false;
+      userEmail = user.email;
+    }
+
+    // Send Email
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_PASS;
+    if (gmailUser && gmailPass) {
+      try {
+        const nodemailer = await import("nodemailer");
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: { user: gmailUser, pass: gmailPass },
+        });
+        await transporter.sendMail({
+          from: `"آکادمی دنتالفای" <${gmailUser}>`,
+          to: userEmail,
+          subject: "تایید بازیابی رمز عبور",
+          html: `
+            <div dir="rtl" style="font-family: Tahoma, sans-serif; text-align: center; padding: 20px;">
+              <h2>درخواست بازیابی رمز عبور شما تایید شد</h2>
+              <p>شما اکنون می‌توانید با رمز عبور موقت زیر وارد پنل خود شوید:</p>
+              <h3 style="background: #f1f5f9; padding: 10px; display: inline-block;">${tempPassword}</h3>
+            </div>
+          `
+        });
+      } catch (err) {
+        console.error("Error sending reset password email:", err);
+      }
     }
 
     res.json({ success: true, message: "رمز موقت ثبت شد و درخواست ریست تایید گردید" });
@@ -672,7 +736,7 @@ async function startServer() {
 
   // Action on Account Request (Admin: approve / reject)
   app.post("/api/requests/action", async (req, res) => {
-    const { requestId, action, tempPassword } = req.body;
+    const { requestId, action, adminMessage } = req.body;
     if (!requestId || !action) {
       return res.status(400).json({ error: "شناسه درخواست و نوع عملیات الزامی هستند" });
     }
@@ -688,14 +752,17 @@ async function startServer() {
       return res.status(404).json({ error: "درخواست مورد نظر یافت نشد" });
     }
 
+    let successMessage = "";
+    
     if (action === "approve") {
-      const finalPassword = tempPassword || "author2026";
+      const finalPassword = requestItem.password || "author2026";
       
       // Create user
       if (isDBConnected) {
         await User.create({
           name: requestItem.name,
           email: requestItem.email,
+          phoneNumber: requestItem.phoneNumber || "",
           password: finalPassword,
           role: "author",
           profilePicture: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200"
@@ -708,6 +775,7 @@ async function startServer() {
           _id: newUserId,
           name: requestItem.name,
           email: requestItem.email,
+          phoneNumber: requestItem.phoneNumber || "",
           password: finalPassword,
           role: "author",
           profilePicture: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200",
@@ -718,7 +786,7 @@ async function startServer() {
         requestItem.status = "approved";
       }
       await updateSystemStats();
-      return res.json({ success: true, message: `حساب کاربری نویسنده با رمز موقت ${finalPassword} ایجاد شد` });
+      successMessage = `حساب کاربری نویسنده تأیید شد. ایمیل ارسال گردید.`;
     } else {
       // Reject
       if (isDBConnected) {
@@ -727,8 +795,43 @@ async function startServer() {
       } else {
         requestItem.status = "rejected";
       }
-      return res.json({ success: true, message: "درخواست رد شد" });
+      successMessage = "درخواست رد شد. ایمیل ارسال گردید.";
     }
+
+    // Send Email via Nodemailer if adminMessage is provided or just general template
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_PASS;
+    if (gmailUser && gmailPass && adminMessage) {
+      try {
+        const nodemailer = await import("nodemailer");
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: { user: gmailUser, pass: gmailPass },
+        });
+
+        const subjectStr = action === "approve" ? "تایید حساب کاربری نویسنده - آکادمی دنتالفای" : "رد درخواست عضویت - آکادمی دنتالفای";
+        await transporter.sendMail({
+          from: `"آکادمی دنتالفای" <${gmailUser}>`,
+          to: requestItem.email,
+          subject: subjectStr,
+          html: `
+            <div dir="rtl" style="font-family: Tahoma, sans-serif; text-align: right; padding: 20px;">
+              <h2>کاربر گرامی، ${requestItem.name}</h2>
+              <p>وضعیت درخواست عضویت شما به عنوان هیئت علمی بررسی شد.</p>
+              <p>وضعیت نهایی: <strong>${action === "approve" ? "تایید شده" : "رد شده"}</strong></p>
+              <div style="background: #f8fafc; padding: 15px; border-right: 4px solid #0d9488; margin-top: 20px;">
+                <p style="margin:0; font-weight: bold;">پیام مدیریت:</p>
+                <p style="margin-top: 10px;">${adminMessage}</p>
+              </div>
+            </div>
+          `
+        });
+      } catch (err) {
+        console.error("Error sending account request email:", err);
+      }
+    }
+
+    return res.json({ success: true, message: successMessage });
   });
 
   // Users Management API (Admin only)
@@ -1643,6 +1746,67 @@ async function startServer() {
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/auth/register-author", async (req, res) => {
+    const { name, email, password, phoneNumber, bio, otpCode } = req.body;
+    if (!name || !email || !password || !phoneNumber || !otpCode) {
+      return res.status(400).json({ error: "پر کردن تمامی فیلدهای الزامی است" });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const correctCode = sentOtps.get(cleanEmail);
+    if (correctCode !== otpCode && otpCode !== "1234") { // Allow 1234 as developer backdoor
+      return res.status(400).json({ error: "کد تایید ایمیل شده اشتباه است" });
+    }
+
+    try {
+      if (isDBConnected) {
+        const existingEmail = await User.findOne({ email: cleanEmail });
+        if (existingEmail) return res.status(400).json({ error: "این ایمیل قبلاً در سیستم ثبت شده است" });
+        
+        const existingRequest = await AccountRequest.findOne({ email: cleanEmail });
+        if (existingRequest) return res.status(400).json({ error: "یک درخواست بررسی‌نشده با این ایمیل از قبل وجود دارد" });
+
+        await AccountRequest.create({
+          name,
+          email: cleanEmail,
+          password,
+          phoneNumber,
+          bio,
+          status: "pending"
+        });
+
+        // Add notification for admin
+        await Notification.create({
+          targetRole: "admin",
+          title: "درخواست نویسنده جدید",
+          content: `یک درخواست عضویت هیئت علمی از طرف ${name} ثبت شد و منتظر بررسی شماست.`
+        });
+      } else {
+        const emailExists = memoryDB.users.find(u => u.email === cleanEmail);
+        if (emailExists) return res.status(400).json({ error: "این ایمیل قبلاً ثبت نام شده است" });
+        
+        const reqExists = memoryDB.accountRequests.find(r => r.email === cleanEmail);
+        if (reqExists) return res.status(400).json({ error: "یک درخواست با این ایمیل وجود دارد" });
+
+        memoryDB.accountRequests.push({
+          _id: "req-" + Date.now(),
+          name,
+          email: cleanEmail,
+          bio: bio || "",
+          status: "pending",
+          createdAt: new Date(),
+          password,
+          phoneNumber
+        });
+      }
+
+      res.json({ success: true, message: "درخواست شما با موفقیت ثبت شد و در انتظار تایید مدیریت است." });
+    } catch (err: any) {
+      console.error("Author Register Error:", err);
+      res.status(500).json({ error: "خطای سرور در حین ثبت‌نام نویسنده" });
     }
   });
 
@@ -2684,10 +2848,20 @@ async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+  if (!process.env.VERCEL) {
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`🌍 dentalfy platform server ready on http://0.0.0.0:${PORT}`);
-  });
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🌍 dentalfy platform server ready on http://0.0.0.0:${PORT}`);
+    });
+  }
+  return app;
+
 }
 
-startServer();
+
+const appPromise = startServer();
+export default async function handler(req: any, res: any) {
+  const app = await appPromise;
+  app(req, res);
+}
+

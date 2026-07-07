@@ -59,12 +59,12 @@ export function Chatbot() {
             initial={{ opacity: 0, y: 50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            className="absolute bottom-16 left-0 w-80 md:w-96 h-[480px] bg-white rounded-2xl border border-slate-200 shadow-2xl flex flex-col overflow-hidden"
+            className="absolute bottom-16 left-0 w-80 md:w-96 h-[480px] bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="bg-teal-600 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 dark:bg-slate-800/20 flex items-center justify-center">
                   <Bot className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -76,14 +76,14 @@ export function Chatbot() {
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                className="p-1 hover:bg-white dark:bg-slate-800 dark:bg-slate-800/10 rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Messages list */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
+            <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50 dark:bg-slate-900/50">
               {messages.map((msg, i) => (
                 <div
                   key={i}
@@ -93,7 +93,7 @@ export function Chatbot() {
                     className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed shadow-sm ${
                       msg.sender === "user"
                         ? "bg-teal-600 text-white rounded-br-none"
-                        : "bg-white text-slate-700 rounded-bl-none border border-slate-100"
+                        : "bg-white dark:bg-slate-800 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-none border border-slate-100 dark:border-slate-800"
                     }`}
                   >
                     {msg.text}
@@ -102,7 +102,7 @@ export function Chatbot() {
               ))}
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-none p-3 shadow-sm flex items-center gap-2 text-slate-400 text-xs">
+                  <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-2xl rounded-bl-none p-3 shadow-sm flex items-center gap-2 text-slate-400 text-xs">
                     <RefreshCw className="w-4 h-4 animate-spin text-teal-600" />
                     درحال تحلیل پاسخ علمی...
                   </div>
@@ -112,13 +112,13 @@ export function Chatbot() {
             </div>
 
             {/* Input Form */}
-            <form onSubmit={handleSend} className="p-3 border-t border-slate-100 bg-white flex gap-2">
+            <form onSubmit={handleSend} className="p-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-800 dark:bg-slate-800 flex gap-2">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="سوال علمی یا بالینی خود را بپرسید..."
-                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800"
+                className="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100"
               />
               <button
                 type="submit"

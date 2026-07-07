@@ -97,6 +97,8 @@ export interface IAccountRequest {
   name: string;
   email: string;
   bio: string;
+  password?: string;
+  phoneNumber?: string;
   status: "pending" | "approved" | "rejected";
   createdAt: string;
 }
