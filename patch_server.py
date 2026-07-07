@@ -3,28 +3,29 @@ import re
 with open('server.ts', 'r') as f:
     content = f.read()
 
-# Change startServer to configure and return the app, but not listen.
-# Or just export a handler for Vercel at the end of the file.
+content = content.replace('import { createServer as createViteServer } from "vite";\n', '')
 
-content = content.replace("app.listen(PORT, \"0.0.0.0\", () => {\n    console.log(`🌍 dentalfy platform server ready on http://0.0.0.0:${PORT}`);\n  });", """
-  if (!process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🌍 dentalfy platform server ready on http://0.0.0.0:${PORT}`);
+old_vite_block = '''  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
     });
-  }
-""")
+    app.use(vite.middlewares);
+  }'''
 
-content = content.replace("startServer();", """
-const appPromise = startServer();
-export default async function handler(req: any, res: any) {
-  const app = await appPromise;
-  app(req, res);
-}
-""")
+new_vite_block = '''  if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  }'''
 
-# Actually, startServer currently returns nothing and is scoped inside `async function startServer() {`
-content = content.replace("async function startServer() {", "export async function startServer() {")
-content = content.replace("  if (!process.env.VERCEL) {", "  return app;\n  if (!process.env.VERCEL) {")
+if old_vite_block in content:
+    content = content.replace(old_vite_block, new_vite_block)
+else:
+    print("Could not find old_vite_block")
 
 with open('server.ts', 'w') as f:
     f.write(content)
