@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { MessageSquare, Send, X, Bot, RefreshCw } from "lucide-react";
+import { MessageSquare, Send, X, Bot, RefreshCw, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export function Chatbot() {
@@ -9,7 +9,15 @@ export function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleClearChat = () => {
+    setMessages([
+      { sender: "bot", text: "سلام! من دستیار هوشمند دنتالفای هستم. چطور می‌توانم در یادگیری مباحث دندانپزشکی یا استفاده از پلتفرم به شما کمک کنم؟" }
+    ]);
+    setShowClearConfirm(false);
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,12 +82,42 @@ export function Chatbot() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 hover:bg-white dark:bg-slate-800 dark:bg-slate-800/10 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                {showClearConfirm ? (
+                  <div className="flex items-center gap-1 bg-teal-700/80 rounded-lg p-0.5 text-[9px] font-bold">
+                    <span className="px-1 text-teal-100">حذف گفتگو؟</span>
+                    <button
+                      onClick={handleClearChat}
+                      className="px-1.5 py-0.5 bg-rose-600 text-white rounded hover:bg-rose-700 transition-colors cursor-pointer"
+                    >
+                      بله
+                    </button>
+                    <button
+                      onClick={() => setShowClearConfirm(false)}
+                      className="px-1.5 py-0.5 bg-teal-800 text-white rounded hover:bg-teal-950 transition-colors cursor-pointer"
+                    >
+                      خیر
+                    </button>
+                  </div>
+                ) : (
+                  messages.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowClearConfirm(true)}
+                      className="p-1.5 hover:bg-white/10 rounded-lg transition-colors cursor-pointer text-teal-100 hover:text-white"
+                      title="پاک کردن گفتگو"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1 hover:bg-white dark:bg-slate-800/10 rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Messages list */}

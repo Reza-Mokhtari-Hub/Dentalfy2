@@ -364,24 +364,145 @@ export async function startServer() {
       }
 
       // Seed initial courses if not exist
-      const coursesCount = await Course.countDocuments();
-      if (coursesCount === 0) {
-        await Course.create(defaultCourses.map(c => ({ title: c.title, description: c.description, syllabus: c.syllabus })));
-        console.log("🌱 Seeded Default Courses to MongoDB.");
+      let dbCourses = await Course.find();
+      for (const dc of defaultCourses) {
+        const found = dbCourses.find(c => c.title === dc.title);
+        if (!found) {
+          const newCourse = await Course.create({
+            title: dc.title,
+            description: dc.description,
+            syllabus: dc.syllabus
+          });
+          dbCourses.push(newCourse);
+          console.log(`🌱 Seeded Default Course: "${dc.title}"`);
+        }
+      }
+
+      // Seed default posts
+      let dbAuthor = await User.findOne({ role: "author" });
+      if (!dbAuthor) {
+        dbAuthor = await User.create({
+          name: "دکتر مریم رضایی",
+          email: "author@rmo.local",
+          password: "author2026",
+          role: "author",
+          profilePicture: "https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=200",
+          resetPasswordRequested: false,
+          temporaryPassword: "",
+        });
+        console.log("🌱 Seeded Default Author to MongoDB.");
+      }
+
+      const restorative = dbCourses.find(c => c.title.includes("ترمیمی"));
+      const endodontic = dbCourses.find(c => c.title.includes("اندودنتیکس"));
+
+      const postsToSeed = [
+        {
+          title: "راهنمای گام به گام تراش کامپوزیت ونیر مستقیم",
+          content: [
+            { id: "b1", type: "heading" as const, value: "مقدمه و مانیفست تراش" },
+            { id: "b2", type: "text" as const, value: "در بازسازی زیبایی با کامپوزیت ونیر مستقیم، هدف اصلی حفظ حداکثری ساختار دندان (بافت مینا) است. تراش محافظه‌کارانه به عمق حدود ۰.۳ تا ۰.۵ میلی‌متر به بقای طولانی‌مدت درمان کمک شایانی می‌کند." },
+            { id: "b3", type: "quote" as const, value: "«بزرگترین هنر دندانپزشکی ترمیمی، تقلید بی‌نقص از طبیعت با کمترین مداخله است.»" },
+            { id: "b4", type: "heading" as const, value: "مراحل کلیدی اجرا" },
+            { id: "b5", type: "list" as const, value: ["آماده‌سازی لبه لثه‌ای با نخ زیرلثه", "انتخاب رنگ کامپوزیت در نور طبیعی", "بکارگیری باندیگ نسل پنجم یا پنجم اصلاح شده"] }
+          ],
+          author: dbAuthor._id,
+          course: restorative ? restorative._id : null,
+          status: "published" as const,
+          rejectionReason: "",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        {
+          title: "مدیریت ابزارهای روتاری در کانال‌های خمیده",
+          content: [
+            { id: "b11", type: "heading" as const, value: "پیشگیری از شکستگی فایل در کانال" },
+            { id: "b12", type: "text" as const, value: "کانال‌های با انحنای شدید همیشه چالش‌برانگیز هستند. استفاده از تورک مناسب و سرعت تنظیم‌شده موتور روتاری، شانس موفقیت درمان را تا ۹۰ درصد افزایش می‌دهد." },
+            { id: "b13", type: "video" as const, value: "https://www.youtube.com/embed/dQw4w9WgXcQ" }
+          ],
+          author: dbAuthor._id,
+          course: endodontic ? endodontic._id : null,
+          status: "published" as const,
+          rejectionReason: "",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ];
+
+      for (const postToCreate of postsToSeed) {
+        const postExists = await Post.findOne({ title: postToCreate.title });
+        if (!postExists) {
+          await Post.create(postToCreate as any);
+          console.log(`🌱 Seeded Default Post: "${postToCreate.title}"`);
+        } else if (!postExists.course && postToCreate.course) {
+          postExists.course = postToCreate.course as any;
+          await postExists.save();
+          console.log(`🔗 Linked existing post "${postExists.title}" to course.`);
+        }
+      }
+
+      // Seed default quizzes
+      if (restorative) {
+        const quizExists = await Quiz.findOne({ courseId: restorative._id.toString() });
+        if (!quizExists) {
+          await Quiz.create({
+            courseId: restorative._id.toString(),
+            passingPercentage: 70,
+            questions: [
+              {
+                questionText: "عمق تراش استاندارد برای لمینت‌های سرامیکی محافظه‌کارانه چقدر است؟",
+                options: ["۰.۳ تا ۰.۵ میلی‌متر", "۱.۰ تا ۱.۵ میلی‌متر", "۲.۰ میلی‌متر", "بدون نیاز به تراش"],
+                correctAnswerIndex: 0
+              },
+              {
+                questionText: "هدف اصلی از به کار بردن نخ زیر لثه‌ای چیست؟",
+                options: ["کاهش خونریزی لثه", "عقب زدن لثه برای ثبت دقیق خط تراش لبه‌ای", "زیباسازی دندان", "شستشوی شیار لثه‌ای"],
+                correctAnswerIndex: 1
+              }
+            ]
+          });
+          console.log("🌱 Seeded Default Quiz for Restorative course.");
+        }
+      }
+      if (endodontic) {
+        const quizExists = await Quiz.findOne({ courseId: endodontic._id.toString() });
+        if (!quizExists) {
+          await Quiz.create({
+            courseId: endodontic._id.toString(),
+            passingPercentage: 70,
+            questions: [
+              {
+                questionText: "کدام یک از موارد زیر خطر شکستگی فایل روتاری در کانال‌های با انحنای شدید را افزایش می‌دهد؟",
+                options: ["کاربرد لوبریکانت یا ژل EDTA", "اعمال تورک بالا و عدم کنترل سرعت فایل روتاری", "کاربرد متناوب شستشوی کانال", "حرکت ملایم بالا به پایین فایل"],
+                correctAnswerIndex: 1
+              },
+              {
+                questionText: "محلول استاندارد برای شستشو و پاکسازی بیوشیمیایی کانال ریشه چیست؟",
+                options: ["نرمال سالین", "سدیم هیپوکلریت (NaOCl)", "الکل ۹۶ درصد", "آب مقطر"],
+                correctAnswerIndex: 1
+              }
+            ]
+          });
+          console.log("🌱 Seeded Default Quiz for Endodontic course.");
+        }
       }
 
       // Seed default library docs if none exist
-      const libraryCount = await LibraryDoc.countDocuments();
-      if (libraryCount === 0) {
-        await LibraryDoc.create(defaultLibraryDocs.map(d => ({ title: d.title, file: d.file, size: d.size })));
-        console.log("🌱 Seeded Default Library Documents to MongoDB.");
+      for (const d of defaultLibraryDocs) {
+        const docExists = await LibraryDoc.findOne({ title: d.title });
+        if (!docExists) {
+          await LibraryDoc.create({ title: d.title, file: d.file, size: d.size });
+          console.log(`🌱 Seeded Default Library Doc: "${d.title}"`);
+        }
       }
 
       // Seed default FAQs if none exist
-      const faqCount = await FAQ.countDocuments();
-      if (faqCount === 0) {
-        await FAQ.create(defaultFAQs.map(f => ({ question: f.question, answer: f.answer })));
-        console.log("🌱 Seeded Default FAQs to MongoDB.");
+      for (const f of defaultFAQs) {
+        const faqExists = await FAQ.findOne({ question: f.question });
+        if (!faqExists) {
+          await FAQ.create({ question: f.question, answer: f.answer });
+          console.log(`🌱 Seeded Default FAQ: "${f.question}"`);
+        }
       }
 
       // Seed Site Settings if not exist
@@ -416,8 +537,40 @@ export async function startServer() {
         const postsCount = await Post.countDocuments({ status: "published" });
         const authorsCount = await User.countDocuments({ role: "author" });
         await SiteSettings.updateOne({}, { $set: { "stats.coursesCount": coursesCount, "stats.postsCount": postsCount, "stats.authorsCount": authorsCount } });
+
+        // --- SELF-HEALING SYSTEM LINKING ---
+        // Ensure every course has at least one published post, so that student panel courses are never empty!
+        const courses = await Course.find();
+        for (const course of courses) {
+          const postCount = await Post.countDocuments({ course: course._id, status: "published" });
+          if (postCount === 0) {
+            // Find any published post currently unlinked, or even associate any published post
+            const unlinkedPost = await Post.findOne({ $or: [{ course: null }, { course: { $exists: false } }], status: "published" });
+            if (unlinkedPost) {
+              unlinkedPost.course = course._id as any;
+              await unlinkedPost.save();
+              console.log(`🔗 Self-Healed: Linked unlinked post "${unlinkedPost.title}" to course "${course.title}".`);
+            } else {
+              const anyPost = await Post.findOne({ status: "published" });
+              if (anyPost) {
+                // Clone the post to link to this course to avoid stealing it from another course
+                await Post.create({
+                  title: anyPost.title,
+                  content: anyPost.content,
+                  author: anyPost.author,
+                  course: course._id,
+                  status: "published",
+                  tags: anyPost.tags,
+                  summary: anyPost.summary,
+                  coverImage: anyPost.coverImage
+                });
+                console.log(`🔗 Self-Healed: Cloned and linked post "${anyPost.title}" to course "${course.title}".`);
+              }
+            }
+          }
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Error in updateSystemStats self-healing database:", err);
       }
     } else {
       memoryDB.siteSettings.stats.coursesCount = memoryDB.courses.length;
@@ -665,29 +818,47 @@ export async function startServer() {
 
   // Update Profile & Password
   app.post("/api/profile/update", async (req, res) => {
-    const { userId, name, email, password, profilePicture } = req.body;
+    const { userId, name, email, oldPassword, newPassword, profilePicture } = req.body;
     if (!userId) {
       return res.status(400).json({ error: "شناسه کاربر الزامی است" });
     }
 
-    if (isDBConnected) {
-      const user = await User.findById(userId);
-      if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-      if (name) user.name = name;
-      if (email) user.email = email.toLowerCase().trim();
-      if (password) user.password = password;
-      if (profilePicture) user.profilePicture = profilePicture;
-      await user.save();
-    } else {
-      const user = memoryDB.users.find(u => u._id === userId);
-      if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-      if (name) user.name = name;
-      if (email) user.email = email.toLowerCase().trim();
-      if (password) user.password = password;
-      if (profilePicture) user.profilePicture = profilePicture;
-    }
+    try {
+      if (isDBConnected) {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        
+        if (newPassword) {
+          if (user.password && user.password !== oldPassword) {
+            return res.status(400).json({ error: "رمز عبور فعلی اشتباه است" });
+          }
+          user.password = newPassword;
+        }
+        
+        if (name) user.name = name;
+        if (email) user.email = email.toLowerCase().trim();
+        if (profilePicture) user.profilePicture = profilePicture;
+        await user.save();
+      } else {
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        
+        if (newPassword) {
+          if (user.password && user.password !== oldPassword) {
+            return res.status(400).json({ error: "رمز عبور فعلی اشتباه است" });
+          }
+          user.password = newPassword;
+        }
+        
+        if (name) user.name = name;
+        if (email) user.email = email.toLowerCase().trim();
+        if (profilePicture) user.profilePicture = profilePicture;
+      }
 
-    res.json({ success: true, message: "پروفایل با موفقیت بروزرسانی شد" });
+      res.json({ success: true, message: "پروفایل با موفقیت بروزرسانی شد" });
+    } catch (err: any) {
+      res.status(500).json({ error: "خطا در بروزرسانی پروفایل" });
+    }
   });
 
   // Submit Account Request (Public Form)
@@ -768,6 +939,15 @@ export async function startServer() {
         });
         requestItem.status = "approved";
         await requestItem.save();
+
+        // Notify user
+        await Notification.create({
+          userId: null,
+          targetRole: "author",
+          title: "تبریک! حساب کاربری شما تایید شد",
+          content: `همکار گرامی ${requestItem.name}، درخواست شما برای عضویت در تیم علمی تایید شد.`,
+          isRead: false
+        });
       } else {
         const newUserId = "user-gen-" + Date.now();
         memoryDB.users.push({
@@ -780,9 +960,23 @@ export async function startServer() {
           profilePicture: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200",
           resetPasswordRequested: false,
           temporaryPassword: "",
+          bookmarks: [],
+          readingHistory: [],
+          progress: [],
+          certificates: [],
           createdAt: new Date()
         });
         requestItem.status = "approved";
+
+        memoryDB.notifications.unshift({
+          _id: "notif-" + Date.now(),
+          userId: null,
+          targetRole: "author",
+          title: "تبریک! حساب کاربری شما تایید شد",
+          content: `همکار گرامی ${requestItem.name}، درخواست شما برای عضویت در تیم علمی تایید شد.`,
+          isRead: false,
+          createdAt: new Date()
+        });
       }
       await updateSystemStats();
       successMessage = `حساب کاربری نویسنده تأیید شد. ایمیل ارسال گردید.`;
@@ -857,61 +1051,86 @@ export async function startServer() {
   });
 
   app.post("/api/users/action", async (req, res) => {
-    const { userId, action, newPassword, newRole } = req.body;
-    if (!userId || !action) {
-      return res.status(400).json({ error: "اطلاعات ارسالی ناقص است" });
-    }
+    try {
+      const { userId, action, newPassword, newRole } = req.body;
+      if (!userId || !action) {
+        return res.status(400).json({ error: "اطلاعات ارسالی ناقص است" });
+      }
 
-    if (isDBConnected) {
-      const user = await User.findById(userId);
-      if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+      if (isDBConnected) {
+        let user = null;
+        try {
+          user = await User.findById(userId);
+        } catch (e) {
+          // Suppress CastError
+        }
+        
+        if (!user) {
+          try {
+            user = await User.findOne({ _id: userId });
+          } catch (e) {
+            // Suppress CastError
+          }
+        }
 
-      if (action === "suspend") {
-        user.isSuspended = true;
-        await user.save();
-      } else if (action === "unsuspend") {
-        user.isSuspended = false;
-        await user.save();
-      } else if (action === "changeRole") {
-        if (newRole === "admin" || newRole === "author") {
-          user.role = newRole;
+        if (!user) {
+          user = await User.findOne({ email: userId });
+        }
+
+        if (!user) {
+          return res.status(404).json({ error: "کاربر یافت نشد" });
+        }
+
+        if (action === "suspend") {
+          user.isSuspended = true;
           await user.save();
+        } else if (action === "unsuspend") {
+          user.isSuspended = false;
+          await user.save();
+        } else if (action === "changeRole") {
+          if (newRole === "admin" || newRole === "author" || newRole === "student") {
+            user.role = newRole;
+            await user.save();
+          }
+        } else if (action === "changePassword") {
+          if (!newPassword || newPassword.trim().length < 4) {
+            return res.status(400).json({ error: "رمز عبور جدید باید حداقل ۴ کاراکتر باشد" });
+          }
+          user.password = newPassword.trim();
+          user.temporaryPassword = ""; // Clear temporary password if reset
+          await user.save();
+        } else if (action === "delete") {
+          await User.deleteOne({ _id: user._id });
         }
-      } else if (action === "changePassword") {
-        if (!newPassword || newPassword.trim().length < 4) {
-          return res.status(400).json({ error: "رمز عبور جدید باید حداقل ۴ کاراکتر باشد" });
-        }
-        user.password = newPassword.trim();
-        user.temporaryPassword = ""; // Clear temporary password if reset
-        await user.save();
-      } else if (action === "delete") {
-        await User.deleteOne({ _id: userId });
-      }
-    } else {
-      const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
-      if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+      } else {
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
-      if (action === "suspend") {
-        user.isSuspended = true;
-      } else if (action === "unsuspend") {
-        user.isSuspended = false;
-      } else if (action === "changeRole") {
-        if (newRole === "admin" || newRole === "author") {
-          user.role = newRole;
+        if (action === "suspend") {
+          user.isSuspended = true;
+        } else if (action === "unsuspend") {
+          user.isSuspended = false;
+        } else if (action === "changeRole") {
+          if (newRole === "admin" || newRole === "author" || newRole === "student") {
+            user.role = newRole;
+          }
+        } else if (action === "changePassword") {
+          if (!newPassword || newPassword.trim().length < 4) {
+            return res.status(400).json({ error: "رمز عبور جدید باید حداقل ۴ کاراکتر باشد" });
+          }
+          user.password = newPassword.trim();
+          user.temporaryPassword = "";
+        } else if (action === "delete") {
+          memoryDB.users = memoryDB.users.filter(u => u._id !== userId && u.id !== userId);
         }
-      } else if (action === "changePassword") {
-        if (!newPassword || newPassword.trim().length < 4) {
-          return res.status(400).json({ error: "رمز عبور جدید باید حداقل ۴ کاراکتر باشد" });
-        }
-        user.password = newPassword.trim();
-        user.temporaryPassword = "";
-      } else if (action === "delete") {
-        memoryDB.users = memoryDB.users.filter(u => u._id !== userId && u.id !== userId);
       }
+
+      await updateSystemStats();
+      res.json({ success: true, message: "عملیات با موفقیت انجام شد" });
+    } catch (err: any) {
+      console.error("Error in /api/users/action:", err);
+      res.status(500).json({ error: err.message || "خطای سرور" });
     }
-
-    await updateSystemStats();
-    res.json({ success: true, message: "عملیات با موفقیت انجام شد" });
   });
 
   // Courses API: Get all active courses
@@ -963,8 +1182,12 @@ export async function startServer() {
         // If author requests their own, show all statuses (pending, published, rejected)
         delete query.status; 
       }
-      if (courseId) {
-        query.course = courseId;
+      if (courseId && courseId !== "undefined" && courseId !== "null" && courseId !== "") {
+        if (typeof courseId === "string" && courseId.match(/^[0-9a-fA-F]{24}$/)) {
+          query.course = courseId;
+        } else {
+          query.course = null; // Quietly prevent CastError for invalid ObjectIds
+        }
       }
 
       posts = await Post.find(query)
@@ -1128,6 +1351,46 @@ export async function startServer() {
     }
   });
 
+  // Delete Course
+  app.delete("/api/courses/:id", async (req, res) => {
+    const { id } = req.params;
+    if (isDBConnected) {
+      await Course.deleteOne({ _id: id });
+      // Also update posts that were in this course
+      await Post.updateMany({ course: id }, { $set: { course: null } });
+    } else {
+      memoryDB.courses = memoryDB.courses.filter(c => c._id !== id);
+      memoryDB.posts = memoryDB.posts.map(p => p.course === id ? { ...p, course: null } : p);
+    }
+    await updateSystemStats();
+    res.json({ success: true, message: "دوره با موفقیت حذف شد" });
+  });
+
+  // Update Course
+  app.post("/api/courses/update", async (req, res) => {
+    const { courseId, title, description, syllabus } = req.body;
+    if (!courseId || !title) {
+      return res.status(400).json({ error: "اطلاعات دوره ناقص است" });
+    }
+    if (isDBConnected) {
+      await Course.updateOne(
+        { _id: courseId },
+        { $set: { title, description, syllabus: syllabus || [] } }
+      );
+    } else {
+      const idx = memoryDB.courses.findIndex(c => c._id === courseId);
+      if (idx !== -1) {
+        memoryDB.courses[idx] = {
+          ...memoryDB.courses[idx],
+          title,
+          description: description || "",
+          syllabus: syllabus || []
+        };
+      }
+    }
+    res.json({ success: true, message: "دوره با موفقیت بروزرسانی شد" });
+  });
+
   // Action on Post (Admin Approve / Reject)
   app.post("/api/posts/action", async (req, res) => {
     const { postId, action, reason } = req.body;
@@ -1270,7 +1533,7 @@ export async function startServer() {
 4. 'list': برای دسته‌بندی مراحل درمان، تداخل‌های دارویی، تجهیزات یا راهنماهای سریع.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt,
         config: {
           systemInstruction: "شما مقالات علمی دندانپزشکی با دقت ۱۰۰٪ بالینی و اصطلاحات پزشکی و دندانپزشکی معتبر به زبان فارسی تولید می‌کنید.",
@@ -1830,7 +2093,7 @@ export async function startServer() {
         await user.save();
         res.json({ success: true, bookmarks: user.bookmarks });
       } else {
-        const user = memoryDB.users.find(u => u._id === userId);
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
         const index = user.bookmarks.indexOf(postId);
@@ -1914,6 +2177,48 @@ export async function startServer() {
     }
   });
 
+  // Clear entire history
+  app.delete("/api/student/history/:userId", async (req, res) => {
+    const { userId } = req.params;
+    try {
+      if (isDBConnected) {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        user.readingHistory = [];
+        await user.save();
+        res.json({ success: true, history: [] });
+      } else {
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        user.readingHistory = [];
+        res.json({ success: true, history: [] });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Remove individual history item
+  app.delete("/api/student/history/:userId/:itemId", async (req, res) => {
+    const { userId, itemId } = req.params;
+    try {
+      if (isDBConnected) {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        user.readingHistory = user.readingHistory.filter(h => h.itemId !== itemId);
+        await user.save();
+        res.json({ success: true, history: user.readingHistory });
+      } else {
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        user.readingHistory = user.readingHistory.filter((h: any) => h.itemId !== itemId);
+        res.json({ success: true, history: user.readingHistory });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
 
   // --- PROGRESS TRACKER & DIGITAL CERTIFICATE BUILDER ---
   app.post("/api/student/progress", async (req, res) => {
@@ -1946,8 +2251,11 @@ export async function startServer() {
           progIndex = user.progress.length - 1;
         } else {
           const completed = user.progress[progIndex].completedLessons;
-          if (!completed.includes(postId)) {
+          const posIdx = completed.indexOf(postId);
+          if (posIdx === -1) {
             completed.push(postId);
+          } else {
+            completed.splice(posIdx, 1);
           }
         }
 
@@ -1989,7 +2297,7 @@ export async function startServer() {
         await user.save();
         res.json({ success: true, progress: user.progress[progIndex], newlyIssued, certificateId });
       } else {
-        const user = memoryDB.users.find(u => u._id === userId);
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
         let progIndex = user.progress.findIndex((p: any) => p.courseId === courseId);
@@ -1998,8 +2306,11 @@ export async function startServer() {
           progIndex = user.progress.length - 1;
         } else {
           const completed = user.progress[progIndex].completedLessons;
-          if (!completed.includes(postId)) {
+          const posIdx = completed.indexOf(postId);
+          if (posIdx === -1) {
             completed.push(postId);
+          } else {
+            completed.splice(posIdx, 1);
           }
         }
 
@@ -2379,7 +2690,7 @@ export async function startServer() {
     }
   });
 
-  app.post("/api/courses/:courseId/quiz/generate-ai", async (req, res) => {
+  app.post(["/api/courses/:courseId/quiz/generate", "/api/courses/:courseId/quiz/generate-ai"], async (req, res) => {
     const { courseId } = req.params;
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -2441,7 +2752,7 @@ export async function startServer() {
 لطفاً مطمئن شوید ساختار کاملا معتبر است و از آوردن مارک‌داون یا کلمات اضافی خودداری کنید.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt
       });
 
@@ -2527,6 +2838,26 @@ export async function startServer() {
     }
   });
 
+  app.delete("/api/categories/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      if (isDBConnected) {
+        await Category.findByIdAndDelete(id);
+        res.json({ success: true });
+      } else {
+        const index = memoryDB.categories.findIndex(c => c._id === id);
+        if (index !== -1) {
+          memoryDB.categories.splice(index, 1);
+          res.json({ success: true });
+        } else {
+          res.status(404).json({ error: "دسته‌بندی یافت نشد" });
+        }
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
 
   // --- SYSTEM NOTIFICATIONS & BELLS ---
   app.get("/api/notifications", async (req, res) => {
@@ -2561,6 +2892,30 @@ export async function startServer() {
       } else {
         const n = memoryDB.notifications.find(not => not._id === notificationId);
         if (n) n.isRead = true;
+        res.json({ success: true });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/notifications/read-all", async (req, res) => {
+    const { userId, role } = req.body;
+    try {
+      if (isDBConnected) {
+        const query: any = { $or: [] };
+        if (userId) query.$or.push({ userId });
+        if (role) query.$or.push({ targetRole: role });
+        query.$or.push({ userId: null, targetRole: null });
+
+        await Notification.updateMany(query, { $set: { isRead: true } });
+        res.json({ success: true });
+      } else {
+        memoryDB.notifications.forEach((n: any) => {
+          if (!n.userId || n.userId === userId || n.targetRole === role) {
+            n.isRead = true;
+          }
+        });
         res.json({ success: true });
       }
     } catch (err: any) {
@@ -2816,7 +3171,7 @@ export async function startServer() {
       const prompt = `شما یک دستیار هوش مصنوعی و متخصص آموزش دندانپزشکی در پلتفرم دنتالفای (dentalfy) هستید. به زبان فارسی شیوا، علمی و روان پاسخ دهید. سوال کاربر: ${message}`;
       
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt
       });
 

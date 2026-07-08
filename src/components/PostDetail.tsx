@@ -235,11 +235,10 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                           href={pVal.url} 
                           download={`${pVal.name || "dentalfy"}.pdf`}
                           onClick={(e) => {
-                            if (!pVal.url.startsWith("http")) {
+                            if (pVal.url.startsWith("data:") || pVal.url.startsWith("blob:") || pVal.url.startsWith("http")) {
                               return;
                             }
                             e.preventDefault();
-                            alert("دریافت سند علمی ضمیمه شده...");
                           }}
                           className="px-4 py-2 bg-white dark:bg-slate-800 dark:bg-slate-800 hover:bg-slate-100 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                         >
