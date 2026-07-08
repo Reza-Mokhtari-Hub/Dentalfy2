@@ -32,8 +32,7 @@ export async function startServer() {
       cloudinary.config({
         cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
         api_key: process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
-      });
+        api_secret: process.env.CLOUDINARY_API_SECRET});
       console.log("☁️ Cloudinary is configured and active.");
     }
   } else {
@@ -358,8 +357,7 @@ export async function startServer() {
           email: "admin@rmo.local",
           password: "rmo2026", // Standard string or hashed
           role: "admin",
-          profilePicture: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200",
-        });
+          profilePicture: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200"});
         console.log("🌱 Seeded Default Admin to MongoDB: admin@rmo.local / rmo2026");
       }
 
@@ -388,8 +386,7 @@ export async function startServer() {
           role: "author",
           profilePicture: "https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=200",
           resetPasswordRequested: false,
-          temporaryPassword: "",
-        });
+          temporaryPassword: ""});
         console.log("🌱 Seeded Default Author to MongoDB.");
       }
 
@@ -632,8 +629,7 @@ export async function startServer() {
         email: user.email,
         role: user.role,
         profilePicture: user.profilePicture || "",
-        resetPasswordRequested: user.resetPasswordRequested || false,
-      }
+        resetPasswordRequested: user.resetPasswordRequested || false}
     });
   });
 
@@ -655,8 +651,7 @@ export async function startServer() {
       email: user.email,
       role: user.role,
       profilePicture: user.profilePicture || "",
-      resetPasswordRequested: user.resetPasswordRequested || false,
-    });
+      resetPasswordRequested: user.resetPasswordRequested || false});
   });
 
   // Request password reset (Author)
@@ -692,8 +687,7 @@ export async function startServer() {
         const nodemailer = await import("nodemailer");
         const transporter = nodemailer.createTransport({
           service: "gmail",
-          auth: { user: gmailUser, pass: gmailPass },
-        });
+          auth: { user: gmailUser, pass: gmailPass }});
         await transporter.sendMail({
           from: `"آکادمی دنتالفای" <${gmailUser}>`,
           to: userEmail,
@@ -758,8 +752,7 @@ export async function startServer() {
         const nodemailer = await import("nodemailer");
         const transporter = nodemailer.createTransport({
           service: "gmail",
-          auth: { user: gmailUser, pass: gmailPass },
-        });
+          auth: { user: gmailUser, pass: gmailPass }});
         await transporter.sendMail({
           from: `"آکادمی دنتالفای" <${gmailUser}>`,
           to: userEmail,
@@ -818,7 +811,7 @@ export async function startServer() {
 
   // Update Profile & Password
   app.post("/api/profile/update", async (req, res) => {
-    const { userId, name, email, oldPassword, newPassword, profilePicture } = req.body;
+    const { userId, name, email, oldPassword, newPassword, profilePicture, gender } = req.body;
     if (!userId) {
       return res.status(400).json({ error: "شناسه کاربر الزامی است" });
     }
@@ -853,6 +846,7 @@ export async function startServer() {
         if (name) user.name = name;
         if (email) user.email = email.toLowerCase().trim();
         if (profilePicture) user.profilePicture = profilePicture;
+        if (gender !== undefined) user.gender = gender;
       }
 
       res.json({ success: true, message: "پروفایل با موفقیت بروزرسانی شد" });
@@ -963,7 +957,6 @@ export async function startServer() {
           bookmarks: [],
           readingHistory: [],
           progress: [],
-          certificates: [],
           createdAt: new Date()
         });
         requestItem.status = "approved";
@@ -999,8 +992,7 @@ export async function startServer() {
         const nodemailer = await import("nodemailer");
         const transporter = nodemailer.createTransport({
           service: "gmail",
-          auth: { user: gmailUser, pass: gmailPass },
-        });
+          auth: { user: gmailUser, pass: gmailPass }});
 
         const subjectStr = action === "approve" ? "تایید حساب کاربری نویسنده - آکادمی دنتالفای" : "رد درخواست عضویت - آکادمی دنتالفای";
         await transporter.sendMail({
@@ -1472,8 +1464,7 @@ export async function startServer() {
         // Upload base64 directly to Cloudinary
         const uploadResponse = await cloudinary.uploader.upload(file, {
           resource_type: fileType === "pdf" ? "raw" : "auto",
-          folder: "dentalfy_platform",
-        });
+          folder: "dentalfy_platform"});
         return res.json({
           success: true,
           url: uploadResponse.secure_url,
@@ -1516,10 +1507,7 @@ export async function startServer() {
         apiKey,
         httpOptions: {
           headers: {
-            "User-Agent": "aistudio-build",
-          },
-        },
-      });
+            "User-Agent": "aistudio-build"}}});
 
       const prompt = `شما یک دستیار هوش مصنوعی فوق تخصصی و پزشک دندانپزشک برجسته برای آکادمی دندانپزشکی "دنتالفای (dentalfy)" هستید.
 موضوع مقاله درخواستی کاربر: "${topic}"
@@ -1853,9 +1841,7 @@ export async function startServer() {
           service: "gmail",
           auth: {
             user: gmailUser,
-            pass: gmailPass,
-          },
-        });
+            pass: gmailPass}});
 
         const mailOptions = {
           from: `"آکادمی دنتالفای" <${gmailUser}>`,
@@ -1875,8 +1861,7 @@ export async function startServer() {
               <p style="font-size: 12px; color: #64748b; line-height: 1.6; text-align: center; background-color: #f8fafc; padding: 12px; border-radius: 8px; margin-top: 24px;">این کد تا ۵ دقیقه دیگر معتبر است. در صورتی که این درخواست از طرف شما نبوده است، لطفاً این ایمیل را نادیده بگیرید.</p>
               <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 32px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-bottom: 0;">این ایمیل به صورت خودکار ارسال شده است. از پاسخ دادن به آن خودداری فرمایید.</p>
             </div>
-          `,
-        };
+          `};
 
         await transporter.sendMail(mailOptions);
         console.log(`✅ Real OTP email sent successfully to ${cleanEmail}`);
@@ -1896,8 +1881,8 @@ export async function startServer() {
   });
 
   app.post("/api/auth/register-student", async (req, res) => {
-    const { name, email, password, phoneNumber, otpCode } = req.body;
-    if (!name || !email || !password || !phoneNumber || !otpCode) {
+    const { name, email, password, phoneNumber, otpCode, gender } = req.body;
+    if (!name || !email || !password || !phoneNumber || !otpCode || !gender) {
       return res.status(400).json({ error: "پر کردن تمامی فیلدها الزامی است" });
     }
 
@@ -1917,13 +1902,12 @@ export async function startServer() {
           email: email.toLowerCase().trim(),
           password,
           phoneNumber,
+          gender,
           role: "student",
           profilePicture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
           bookmarks: [],
           readingHistory: [],
-          progress: [],
-          certificates: []
-        });
+          progress: []});
 
         // Add activity log
         await AuditLog.create({
@@ -1946,12 +1930,11 @@ export async function startServer() {
             name: newUser.name,
             email: newUser.email,
             role: newUser.role,
+            gender: newUser.gender,
             phoneNumber: newUser.phoneNumber,
             bookmarks: [],
             readingHistory: [],
-            progress: [],
-            certificates: []
-          }
+            progress: []}
         });
       } else {
         const existingEmail = memoryDB.users.find(u => u.email === email.toLowerCase().trim());
@@ -1964,12 +1947,12 @@ export async function startServer() {
           email: email.toLowerCase().trim(),
           password,
           phoneNumber,
+          gender,
           role: "student" as const,
           profilePicture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
           bookmarks: [] as string[],
           readingHistory: [] as any[],
           progress: [] as any[],
-          certificates: [] as any[],
           createdAt: new Date()
         };
         memoryDB.users.push(newUserObj);
@@ -1998,12 +1981,11 @@ export async function startServer() {
             name,
             email,
             role: "student",
+            gender,
             phoneNumber,
             bookmarks: [],
             readingHistory: [],
-            progress: [],
-            certificates: []
-          }
+            progress: []}
         });
       }
     } catch (err: any) {
@@ -2012,8 +1994,8 @@ export async function startServer() {
   });
 
   app.post("/api/auth/register-author", async (req, res) => {
-    const { name, email, password, phoneNumber, bio, otpCode } = req.body;
-    if (!name || !email || !password || !phoneNumber || !otpCode) {
+    const { name, email, password, phoneNumber, gender, bio, otpCode } = req.body;
+    if (!name || !email || !password || !phoneNumber || !otpCode || !gender) {
       return res.status(400).json({ error: "پر کردن تمامی فیلدهای الزامی است" });
     }
 
@@ -2036,6 +2018,7 @@ export async function startServer() {
           email: cleanEmail,
           password,
           phoneNumber,
+          gender,
           bio,
           status: "pending"
         });
@@ -2262,40 +2245,10 @@ export async function startServer() {
         const complCount = user.progress[progIndex].completedLessons.length;
         user.progress[progIndex].percentage = Math.min(100, Math.round((complCount / totalLessons) * 100));
 
-        // Auto-generate certificate if progress hits 100% and not already generated
         let newlyIssued = false;
-        let certificateId = "";
-        if (user.progress[progIndex].percentage === 100) {
-          const certExists = user.certificates.some(c => c.courseId === courseId);
-          if (!certExists) {
-            certificateId = "CERT-" + Math.floor(100000 + Math.random() * 900000);
-            user.certificates.push({
-              certificateId,
-              courseId,
-              courseTitle,
-              studentName: user.name,
-              issuedAt: new Date()
-            });
-            newlyIssued = true;
-
-            // Log activity
-            await AuditLog.create({
-              actorName: "سیستم صدور سرتیفیکیت",
-              action: "صدور خودکار گواهینامه",
-              target: `${user.name} برای دوره ${courseTitle}`
-            });
-
-            // Notification
-            await Notification.create({
-              userId,
-              title: "صدور گواهینامه دیجیتال",
-              content: `تبریک! شما با موفقیت دوره "${courseTitle}" را به اتمام رساندید و گواهینامه معتبر صادر شد.`
-            });
-          }
-        }
 
         await user.save();
-        res.json({ success: true, progress: user.progress[progIndex], newlyIssued, certificateId });
+        res.json({ success: true, progress: user.progress[progIndex], newlyIssued });
       } else {
         const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
@@ -2318,40 +2271,8 @@ export async function startServer() {
         user.progress[progIndex].percentage = Math.min(100, Math.round((complCount / totalLessons) * 100));
 
         let newlyIssued = false;
-        let certificateId = "";
-        if (user.progress[progIndex].percentage === 100) {
-          const certExists = user.certificates.some((c: any) => c.courseId === courseId);
-          if (!certExists) {
-            certificateId = "CERT-" + Math.floor(100000 + Math.random() * 900000);
-            user.certificates.push({
-              certificateId,
-              courseId,
-              courseTitle,
-              studentName: user.name,
-              issuedAt: new Date()
-            });
-            newlyIssued = true;
 
-            memoryDB.auditLogs.unshift({
-              _id: "log-" + Date.now(),
-              actorName: "سیستم صدور سرتیفیکیت",
-              action: "صدور خودکار گواهینامه",
-              target: `${user.name} برای دوره ${courseTitle}`,
-              createdAt: new Date()
-            });
-
-            memoryDB.notifications.unshift({
-              _id: "not-" + Date.now(),
-              userId,
-              title: "صدور گواهینامه دیجیتال",
-              content: `تبریک! شما با موفقیت دوره "${courseTitle}" را به اتمام رساندید و گواهینامه معتبر صادر شد.`,
-              isRead: false,
-              createdAt: new Date()
-            });
-          }
-        }
-
-        res.json({ success: true, progress: user.progress[progIndex], newlyIssued, certificateId });
+        res.json({ success: true, progress: user.progress[progIndex], newlyIssued });
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -2377,22 +2298,7 @@ export async function startServer() {
     }
   });
 
-  app.get("/api/student/certificates/:userId", async (req, res) => {
-    const { userId } = req.params;
-    try {
-      if (isDBConnected) {
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        res.json(user.certificates || []);
-      } else {
-        const user = memoryDB.users.find(u => u._id === userId);
-        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        res.json(user.certificates || []);
-      }
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
+
 
 
   // --- 5-STAR RATING & REVIEWS SYSTEM ---
@@ -2410,7 +2316,7 @@ export async function startServer() {
           studentEmail: studentEmail || "info@student.local",
           rating,
           comment,
-          isApproved: false // Requires admin moderation
+          isApproved: true // Auto-approved for demo
         });
 
         // Notify admin
@@ -2514,7 +2420,7 @@ export async function startServer() {
           studentName,
           studentEmail: studentEmail || "anonymous@dentalfy.local",
           question,
-          isApproved: false // Moderator approves before showing on study tab
+          isApproved: true // Auto-approved for demo
         });
 
         // Audit log
@@ -3193,8 +3099,7 @@ export async function startServer() {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
-    });
+      appType: "spa"});
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");

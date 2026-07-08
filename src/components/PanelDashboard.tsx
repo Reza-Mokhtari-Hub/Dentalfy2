@@ -55,6 +55,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const [profilePicBase64, setProfilePicBase64] = useState(currentUser.profilePicture || "");
   const [profileNameInput, setProfileNameInput] = useState(currentUser.name || "");
   const [profileEmailInput, setProfileEmailInput] = useState(currentUser.email || "");
+  const [profileGenderInput, setProfileGenderInput] = useState(currentUser.gender || "");
   const [profilePicLinkInput, setProfilePicLinkInput] = useState("");
   const [profilePasswordInput, setProfilePasswordInput] = useState("");
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
@@ -809,6 +810,20 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
       }
     } catch (err) {
       alert("خطا در ثبت پاسخ.");
+    }
+  };
+
+  const handleCommentApprove = async (commentId: string) => {
+    try {
+      const res = await fetch(`/api/comments/${commentId}/approve`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        showMessage("نظر با موفقیت تایید شد.");
+        fetchAdminLists();
+      }
+    } catch (err) {
+      alert("خطا در تایید نظر.");
     }
   };
 
@@ -2402,7 +2417,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         <h3 className="font-extrabold text-sm text-slate-800 dark:text-white leading-tight">
                           مدیریت و تالیف آزمون: {selectedCourseForQuiz.title}
                         </h3>
-                        <p className="text-[10px] text-slate-400 font-bold italic leading-tight">پیکربندی سوالات سنجش علمی و گواهی دوره</p>
+                        <p className="text-[10px] text-slate-400 font-bold italic leading-tight">پیکربندی سوالات سنجش علمی دوره</p>
                       </div>
                     </div>
                     
@@ -2437,7 +2452,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   ) : (
                     <div className="space-y-6">
                       <div className="space-y-2 max-w-xs">
-                        <label className="text-[11px] font-bold text-slate-500 mr-2">حد نصاب قبولی برای دریافت گواهینامه (درصد)</label>
+                        <label className="text-[11px] font-bold text-slate-500 mr-2">حد نصاب قبولی در آزمون (درصد)</label>
                         <input 
                           type="number"
                           min="1"
@@ -2821,9 +2836,14 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       <div key={comment._id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none space-y-3">
                         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
                           <div className="flex items-center gap-2">
-                            <span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-extrabold text-xs flex items-center justify-center shadow-sm">
-                              {comment.name[0]}
-                            </span>
+                            <div className="relative">
+                              <span className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 font-extrabold text-xs flex items-center justify-center shadow-sm">
+                                {comment.name[0]}
+                              </span>
+                              {!comment.isApproved && (
+                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 border-2 border-white dark:border-slate-800 rounded-full animate-pulse"></span>
+                              )}
+                            </div>
                             <div>
                               <h4 className="font-extrabold text-xs text-slate-800 dark:text-slate-100 leading-tight">{comment.name} ({comment.email})</h4>
                               <span className="text-[9px] text-slate-400 font-bold italic">
@@ -2836,6 +2856,16 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                               <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 dark:text-slate-300">
                                 مربوط به مقاله: {linkedPost.title}
                               </span>
+                            )}
+                            {!comment.isApproved && (
+                              <button 
+                                onClick={() => handleCommentApprove(comment._id)}
+                                className="p-1.5 hover:bg-emerald-50 text-emerald-500 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer flex items-center gap-1 bg-emerald-50/50"
+                                title="تایید دیدگاه"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span className="text-[10px] font-bold">تایید</span>
+                              </button>
                             )}
                             <button 
                               onClick={() => handleCommentDelete(comment._id)}
@@ -3348,6 +3378,18 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       dir="ltr"
                       required
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 mr-2">جنسیت</label>
+                    <select 
+                      value={profileGenderInput}
+                      onChange={(e) => setProfileGenderInput(e.target.value)}
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-right focus:outline-none focus:border-indigo-500 transition-all appearance-none"
+                    >
+                      <option value="">انتخاب کنید</option>
+                      <option value="male">آقا</option>
+                      <option value="female">خانم</option>
+                    </select>
                   </div>
                 </div>
 

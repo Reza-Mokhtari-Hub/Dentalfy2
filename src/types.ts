@@ -4,6 +4,7 @@ export interface IUser {
   name: string;
   email: string;
   role: "admin" | "author" | "student";
+  gender?: "male" | "female" | "other" | "";
   profilePicture: string;
   resetPasswordRequested: boolean;
   temporaryPassword?: string;
@@ -20,13 +21,6 @@ export interface IUser {
     courseId: string;
     completedLessons: string[];
     percentage: number;
-  }[];
-  certificates?: {
-    certificateId: string;
-    courseId: string;
-    courseTitle: string;
-    studentName: string;
-    issuedAt: string;
   }[];
   createdAt?: string;
 }

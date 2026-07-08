@@ -68,6 +68,7 @@ export default function App() {
   const [studentEmail, setStudentEmail] = useState("");
   const [studentPassword, setStudentPassword] = useState("");
   const [studentPhone, setStudentPhone] = useState("");
+  const [studentGender, setStudentGender] = useState("");
   const [studentOtpCode, setStudentOtpCode] = useState("");
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [simulatedOtpCode, setSimulatedOtpCode] = useState<string | null>(null);
@@ -211,7 +212,7 @@ export default function App() {
   const handleRegisterStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setOtpError(null);
-    if (!studentName || !studentEmail || !studentPassword || !studentPhone || !studentOtpCode) {
+    if (!studentName || !studentEmail || !studentPassword || !studentPhone || !studentOtpCode || !studentGender) {
       setOtpError("پر کردن تمامی فیلدهای الزامی است");
       return;
     }
@@ -226,6 +227,7 @@ export default function App() {
           email: studentEmail,
           password: studentPassword,
           phoneNumber: studentPhone,
+          gender: studentGender,
           otpCode: studentOtpCode,
           bio: registerRole === "author" ? "درخواست حساب کاربری هیئت علمی" : undefined
         })
@@ -410,6 +412,19 @@ export default function App() {
                           className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-black focus:outline-none focus:border-indigo-500 transition-all"
                           required
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-500 mr-2">جنسیت</label>
+                        <select
+                          value={studentGender}
+                          onChange={(e) => setStudentGender(e.target.value)}
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-black focus:outline-none focus:border-indigo-500 transition-all"
+                          required
+                        >
+                          <option value="">انتخاب کنید</option>
+                          <option value="male">آقا</option>
+                          <option value="female">خانم</option>
+                        </select>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -602,6 +617,19 @@ export default function App() {
                           className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-black focus:outline-none focus:border-indigo-500 transition-all"
                           required
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-slate-500 mr-2">جنسیت</label>
+                        <select
+                          value={studentGender}
+                          onChange={(e) => setStudentGender(e.target.value)}
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-black focus:outline-none focus:border-indigo-500 transition-all"
+                          required
+                        >
+                          <option value="">انتخاب کنید</option>
+                          <option value="male">آقا</option>
+                          <option value="female">خانم</option>
+                        </select>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

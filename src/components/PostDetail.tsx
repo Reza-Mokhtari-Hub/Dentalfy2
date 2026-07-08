@@ -45,7 +45,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
       if (res.ok) {
         setComments(prev => [data.comment, ...prev]);
         setCommentText("");
-        setSubmitMsg("پرسش / نظر شما ثبت شد و آماده پاسخ نویسنده یا مدیر علمی است.");
+        setSubmitMsg("پرسش / نظر شما با موفقیت ثبت شد.");
       } else {
         setSubmitMsg("ثبت نظر ناموفق بود.");
       }

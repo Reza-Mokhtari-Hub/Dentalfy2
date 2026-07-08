@@ -79,6 +79,7 @@ var UserSchema = new import_mongoose2.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   role: { type: String, enum: ["admin", "author", "student"], default: "student" },
+  gender: { type: String, enum: ["male", "female", "other", ""], default: "" },
   profilePicture: { type: String, default: "" },
   resetPasswordRequested: { type: Boolean, default: false },
   temporaryPassword: { type: String, default: "" },
@@ -95,13 +96,6 @@ var UserSchema = new import_mongoose2.Schema({
     courseId: { type: String, required: true },
     completedLessons: { type: [String], default: [] },
     percentage: { type: Number, default: 0 }
-  }],
-  certificates: [{
-    certificateId: { type: String, required: true },
-    courseId: { type: String, required: true },
-    courseTitle: { type: String, required: true },
-    studentName: { type: String, required: true },
-    issuedAt: { type: Date, default: Date.now }
   }],
   createdAt: { type: Date, default: Date.now }
 });
@@ -158,6 +152,7 @@ var AccountRequestSchema = new import_mongoose2.Schema({
   bio: { type: String, default: "" },
   password: { type: String },
   phoneNumber: { type: String },
+  gender: { type: String, default: "" },
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   createdAt: { type: Date, default: Date.now }
 });
@@ -566,20 +561,134 @@ async function startServer() {
         });
         console.log("\u{1F331} Seeded Default Admin to MongoDB: admin@rmo.local / rmo2026");
       }
-      const coursesCount = await Course.countDocuments();
-      if (coursesCount === 0) {
-        await Course.create(defaultCourses.map((c) => ({ title: c.title, description: c.description, syllabus: c.syllabus })));
-        console.log("\u{1F331} Seeded Default Courses to MongoDB.");
+      let dbCourses = await Course.find();
+      for (const dc of defaultCourses) {
+        const found = dbCourses.find((c) => c.title === dc.title);
+        if (!found) {
+          const newCourse = await Course.create({
+            title: dc.title,
+            description: dc.description,
+            syllabus: dc.syllabus
+          });
+          dbCourses.push(newCourse);
+          console.log(`\u{1F331} Seeded Default Course: "${dc.title}"`);
+        }
       }
-      const libraryCount = await LibraryDoc.countDocuments();
-      if (libraryCount === 0) {
-        await LibraryDoc.create(defaultLibraryDocs.map((d) => ({ title: d.title, file: d.file, size: d.size })));
-        console.log("\u{1F331} Seeded Default Library Documents to MongoDB.");
+      let dbAuthor = await User.findOne({ role: "author" });
+      if (!dbAuthor) {
+        dbAuthor = await User.create({
+          name: "\u062F\u06A9\u062A\u0631 \u0645\u0631\u06CC\u0645 \u0631\u0636\u0627\u06CC\u06CC",
+          email: "author@rmo.local",
+          password: "author2026",
+          role: "author",
+          profilePicture: "https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=200",
+          resetPasswordRequested: false,
+          temporaryPassword: ""
+        });
+        console.log("\u{1F331} Seeded Default Author to MongoDB.");
       }
-      const faqCount = await FAQ.countDocuments();
-      if (faqCount === 0) {
-        await FAQ.create(defaultFAQs.map((f) => ({ question: f.question, answer: f.answer })));
-        console.log("\u{1F331} Seeded Default FAQs to MongoDB.");
+      const restorative = dbCourses.find((c) => c.title.includes("\u062A\u0631\u0645\u06CC\u0645\u06CC"));
+      const endodontic = dbCourses.find((c) => c.title.includes("\u0627\u0646\u062F\u0648\u062F\u0646\u062A\u06CC\u06A9\u0633"));
+      const postsToSeed = [
+        {
+          title: "\u0631\u0627\u0647\u0646\u0645\u0627\u06CC \u06AF\u0627\u0645 \u0628\u0647 \u06AF\u0627\u0645 \u062A\u0631\u0627\u0634 \u06A9\u0627\u0645\u067E\u0648\u0632\u06CC\u062A \u0648\u0646\u06CC\u0631 \u0645\u0633\u062A\u0642\u06CC\u0645",
+          content: [
+            { id: "b1", type: "heading", value: "\u0645\u0642\u062F\u0645\u0647 \u0648 \u0645\u0627\u0646\u06CC\u0641\u0633\u062A \u062A\u0631\u0627\u0634" },
+            { id: "b2", type: "text", value: "\u062F\u0631 \u0628\u0627\u0632\u0633\u0627\u0632\u06CC \u0632\u06CC\u0628\u0627\u06CC\u06CC \u0628\u0627 \u06A9\u0627\u0645\u067E\u0648\u0632\u06CC\u062A \u0648\u0646\u06CC\u0631 \u0645\u0633\u062A\u0642\u06CC\u0645\u060C \u0647\u062F\u0641 \u0627\u0635\u0644\u06CC \u062D\u0641\u0638 \u062D\u062F\u0627\u06A9\u062B\u0631\u06CC \u0633\u0627\u062E\u062A\u0627\u0631 \u062F\u0646\u062F\u0627\u0646 (\u0628\u0627\u0641\u062A \u0645\u06CC\u0646\u0627) \u0627\u0633\u062A. \u062A\u0631\u0627\u0634 \u0645\u062D\u0627\u0641\u0638\u0647\u200C\u06A9\u0627\u0631\u0627\u0646\u0647 \u0628\u0647 \u0639\u0645\u0642 \u062D\u062F\u0648\u062F \u06F0.\u06F3 \u062A\u0627 \u06F0.\u06F5 \u0645\u06CC\u0644\u06CC\u200C\u0645\u062A\u0631 \u0628\u0647 \u0628\u0642\u0627\u06CC \u0637\u0648\u0644\u0627\u0646\u06CC\u200C\u0645\u062F\u062A \u062F\u0631\u0645\u0627\u0646 \u06A9\u0645\u06A9 \u0634\u0627\u06CC\u0627\u0646\u06CC \u0645\u06CC\u200C\u06A9\u0646\u062F." },
+            { id: "b3", type: "quote", value: "\xAB\u0628\u0632\u0631\u06AF\u062A\u0631\u06CC\u0646 \u0647\u0646\u0631 \u062F\u0646\u062F\u0627\u0646\u067E\u0632\u0634\u06A9\u06CC \u062A\u0631\u0645\u06CC\u0645\u06CC\u060C \u062A\u0642\u0644\u06CC\u062F \u0628\u06CC\u200C\u0646\u0642\u0635 \u0627\u0632 \u0637\u0628\u06CC\u0639\u062A \u0628\u0627 \u06A9\u0645\u062A\u0631\u06CC\u0646 \u0645\u062F\u0627\u062E\u0644\u0647 \u0627\u0633\u062A.\xBB" },
+            { id: "b4", type: "heading", value: "\u0645\u0631\u0627\u062D\u0644 \u06A9\u0644\u06CC\u062F\u06CC \u0627\u062C\u0631\u0627" },
+            { id: "b5", type: "list", value: ["\u0622\u0645\u0627\u062F\u0647\u200C\u0633\u0627\u0632\u06CC \u0644\u0628\u0647 \u0644\u062B\u0647\u200C\u0627\u06CC \u0628\u0627 \u0646\u062E \u0632\u06CC\u0631\u0644\u062B\u0647", "\u0627\u0646\u062A\u062E\u0627\u0628 \u0631\u0646\u06AF \u06A9\u0627\u0645\u067E\u0648\u0632\u06CC\u062A \u062F\u0631 \u0646\u0648\u0631 \u0637\u0628\u06CC\u0639\u06CC", "\u0628\u06A9\u0627\u0631\u06AF\u06CC\u0631\u06CC \u0628\u0627\u0646\u062F\u06CC\u06AF \u0646\u0633\u0644 \u067E\u0646\u062C\u0645 \u06CC\u0627 \u067E\u0646\u062C\u0645 \u0627\u0635\u0644\u0627\u062D \u0634\u062F\u0647"] }
+          ],
+          author: dbAuthor._id,
+          course: restorative ? restorative._id : null,
+          status: "published",
+          rejectionReason: "",
+          createdAt: /* @__PURE__ */ new Date(),
+          updatedAt: /* @__PURE__ */ new Date()
+        },
+        {
+          title: "\u0645\u062F\u06CC\u0631\u06CC\u062A \u0627\u0628\u0632\u0627\u0631\u0647\u0627\u06CC \u0631\u0648\u062A\u0627\u0631\u06CC \u062F\u0631 \u06A9\u0627\u0646\u0627\u0644\u200C\u0647\u0627\u06CC \u062E\u0645\u06CC\u062F\u0647",
+          content: [
+            { id: "b11", type: "heading", value: "\u067E\u06CC\u0634\u06AF\u06CC\u0631\u06CC \u0627\u0632 \u0634\u06A9\u0633\u062A\u06AF\u06CC \u0641\u0627\u06CC\u0644 \u062F\u0631 \u06A9\u0627\u0646\u0627\u0644" },
+            { id: "b12", type: "text", value: "\u06A9\u0627\u0646\u0627\u0644\u200C\u0647\u0627\u06CC \u0628\u0627 \u0627\u0646\u062D\u0646\u0627\u06CC \u0634\u062F\u06CC\u062F \u0647\u0645\u06CC\u0634\u0647 \u0686\u0627\u0644\u0634\u200C\u0628\u0631\u0627\u0646\u06AF\u06CC\u0632 \u0647\u0633\u062A\u0646\u062F. \u0627\u0633\u062A\u0641\u0627\u062F\u0647 \u0627\u0632 \u062A\u0648\u0631\u06A9 \u0645\u0646\u0627\u0633\u0628 \u0648 \u0633\u0631\u0639\u062A \u062A\u0646\u0638\u06CC\u0645\u200C\u0634\u062F\u0647 \u0645\u0648\u062A\u0648\u0631 \u0631\u0648\u062A\u0627\u0631\u06CC\u060C \u0634\u0627\u0646\u0633 \u0645\u0648\u0641\u0642\u06CC\u062A \u062F\u0631\u0645\u0627\u0646 \u0631\u0627 \u062A\u0627 \u06F9\u06F0 \u062F\u0631\u0635\u062F \u0627\u0641\u0632\u0627\u06CC\u0634 \u0645\u06CC\u200C\u062F\u0647\u062F." },
+            { id: "b13", type: "video", value: "https://www.youtube.com/embed/dQw4w9WgXcQ" }
+          ],
+          author: dbAuthor._id,
+          course: endodontic ? endodontic._id : null,
+          status: "published",
+          rejectionReason: "",
+          createdAt: /* @__PURE__ */ new Date(),
+          updatedAt: /* @__PURE__ */ new Date()
+        }
+      ];
+      for (const postToCreate of postsToSeed) {
+        const postExists = await Post.findOne({ title: postToCreate.title });
+        if (!postExists) {
+          await Post.create(postToCreate);
+          console.log(`\u{1F331} Seeded Default Post: "${postToCreate.title}"`);
+        } else if (!postExists.course && postToCreate.course) {
+          postExists.course = postToCreate.course;
+          await postExists.save();
+          console.log(`\u{1F517} Linked existing post "${postExists.title}" to course.`);
+        }
+      }
+      if (restorative) {
+        const quizExists = await Quiz.findOne({ courseId: restorative._id.toString() });
+        if (!quizExists) {
+          await Quiz.create({
+            courseId: restorative._id.toString(),
+            passingPercentage: 70,
+            questions: [
+              {
+                questionText: "\u0639\u0645\u0642 \u062A\u0631\u0627\u0634 \u0627\u0633\u062A\u0627\u0646\u062F\u0627\u0631\u062F \u0628\u0631\u0627\u06CC \u0644\u0645\u06CC\u0646\u062A\u200C\u0647\u0627\u06CC \u0633\u0631\u0627\u0645\u06CC\u06A9\u06CC \u0645\u062D\u0627\u0641\u0638\u0647\u200C\u06A9\u0627\u0631\u0627\u0646\u0647 \u0686\u0642\u062F\u0631 \u0627\u0633\u062A\u061F",
+                options: ["\u06F0.\u06F3 \u062A\u0627 \u06F0.\u06F5 \u0645\u06CC\u0644\u06CC\u200C\u0645\u062A\u0631", "\u06F1.\u06F0 \u062A\u0627 \u06F1.\u06F5 \u0645\u06CC\u0644\u06CC\u200C\u0645\u062A\u0631", "\u06F2.\u06F0 \u0645\u06CC\u0644\u06CC\u200C\u0645\u062A\u0631", "\u0628\u062F\u0648\u0646 \u0646\u06CC\u0627\u0632 \u0628\u0647 \u062A\u0631\u0627\u0634"],
+                correctAnswerIndex: 0
+              },
+              {
+                questionText: "\u0647\u062F\u0641 \u0627\u0635\u0644\u06CC \u0627\u0632 \u0628\u0647 \u06A9\u0627\u0631 \u0628\u0631\u062F\u0646 \u0646\u062E \u0632\u06CC\u0631 \u0644\u062B\u0647\u200C\u0627\u06CC \u0686\u06CC\u0633\u062A\u061F",
+                options: ["\u06A9\u0627\u0647\u0634 \u062E\u0648\u0646\u0631\u06CC\u0632\u06CC \u0644\u062B\u0647", "\u0639\u0642\u0628 \u0632\u062F\u0646 \u0644\u062B\u0647 \u0628\u0631\u0627\u06CC \u062B\u0628\u062A \u062F\u0642\u06CC\u0642 \u062E\u0637 \u062A\u0631\u0627\u0634 \u0644\u0628\u0647\u200C\u0627\u06CC", "\u0632\u06CC\u0628\u0627\u0633\u0627\u0632\u06CC \u062F\u0646\u062F\u0627\u0646", "\u0634\u0633\u062A\u0634\u0648\u06CC \u0634\u06CC\u0627\u0631 \u0644\u062B\u0647\u200C\u0627\u06CC"],
+                correctAnswerIndex: 1
+              }
+            ]
+          });
+          console.log("\u{1F331} Seeded Default Quiz for Restorative course.");
+        }
+      }
+      if (endodontic) {
+        const quizExists = await Quiz.findOne({ courseId: endodontic._id.toString() });
+        if (!quizExists) {
+          await Quiz.create({
+            courseId: endodontic._id.toString(),
+            passingPercentage: 70,
+            questions: [
+              {
+                questionText: "\u06A9\u062F\u0627\u0645 \u06CC\u06A9 \u0627\u0632 \u0645\u0648\u0627\u0631\u062F \u0632\u06CC\u0631 \u062E\u0637\u0631 \u0634\u06A9\u0633\u062A\u06AF\u06CC \u0641\u0627\u06CC\u0644 \u0631\u0648\u062A\u0627\u0631\u06CC \u062F\u0631 \u06A9\u0627\u0646\u0627\u0644\u200C\u0647\u0627\u06CC \u0628\u0627 \u0627\u0646\u062D\u0646\u0627\u06CC \u0634\u062F\u06CC\u062F \u0631\u0627 \u0627\u0641\u0632\u0627\u06CC\u0634 \u0645\u06CC\u200C\u062F\u0647\u062F\u061F",
+                options: ["\u06A9\u0627\u0631\u0628\u0631\u062F \u0644\u0648\u0628\u0631\u06CC\u06A9\u0627\u0646\u062A \u06CC\u0627 \u0698\u0644 EDTA", "\u0627\u0639\u0645\u0627\u0644 \u062A\u0648\u0631\u06A9 \u0628\u0627\u0644\u0627 \u0648 \u0639\u062F\u0645 \u06A9\u0646\u062A\u0631\u0644 \u0633\u0631\u0639\u062A \u0641\u0627\u06CC\u0644 \u0631\u0648\u062A\u0627\u0631\u06CC", "\u06A9\u0627\u0631\u0628\u0631\u062F \u0645\u062A\u0646\u0627\u0648\u0628 \u0634\u0633\u062A\u0634\u0648\u06CC \u06A9\u0627\u0646\u0627\u0644", "\u062D\u0631\u06A9\u062A \u0645\u0644\u0627\u06CC\u0645 \u0628\u0627\u0644\u0627 \u0628\u0647 \u067E\u0627\u06CC\u06CC\u0646 \u0641\u0627\u06CC\u0644"],
+                correctAnswerIndex: 1
+              },
+              {
+                questionText: "\u0645\u062D\u0644\u0648\u0644 \u0627\u0633\u062A\u0627\u0646\u062F\u0627\u0631\u062F \u0628\u0631\u0627\u06CC \u0634\u0633\u062A\u0634\u0648 \u0648 \u067E\u0627\u06A9\u0633\u0627\u0632\u06CC \u0628\u06CC\u0648\u0634\u06CC\u0645\u06CC\u0627\u06CC\u06CC \u06A9\u0627\u0646\u0627\u0644 \u0631\u06CC\u0634\u0647 \u0686\u06CC\u0633\u062A\u061F",
+                options: ["\u0646\u0631\u0645\u0627\u0644 \u0633\u0627\u0644\u06CC\u0646", "\u0633\u062F\u06CC\u0645 \u0647\u06CC\u067E\u0648\u06A9\u0644\u0631\u06CC\u062A (NaOCl)", "\u0627\u0644\u06A9\u0644 \u06F9\u06F6 \u062F\u0631\u0635\u062F", "\u0622\u0628 \u0645\u0642\u0637\u0631"],
+                correctAnswerIndex: 1
+              }
+            ]
+          });
+          console.log("\u{1F331} Seeded Default Quiz for Endodontic course.");
+        }
+      }
+      for (const d of defaultLibraryDocs) {
+        const docExists = await LibraryDoc.findOne({ title: d.title });
+        if (!docExists) {
+          await LibraryDoc.create({ title: d.title, file: d.file, size: d.size });
+          console.log(`\u{1F331} Seeded Default Library Doc: "${d.title}"`);
+        }
+      }
+      for (const f of defaultFAQs) {
+        const faqExists = await FAQ.findOne({ question: f.question });
+        if (!faqExists) {
+          await FAQ.create({ question: f.question, answer: f.answer });
+          console.log(`\u{1F331} Seeded Default FAQ: "${f.question}"`);
+        }
       }
       const settingsExist = await SiteSettings.findOne();
       if (!settingsExist) {
@@ -610,8 +719,35 @@ async function startServer() {
         const postsCount = await Post.countDocuments({ status: "published" });
         const authorsCount = await User.countDocuments({ role: "author" });
         await SiteSettings.updateOne({}, { $set: { "stats.coursesCount": coursesCount, "stats.postsCount": postsCount, "stats.authorsCount": authorsCount } });
+        const courses = await Course.find();
+        for (const course of courses) {
+          const postCount = await Post.countDocuments({ course: course._id, status: "published" });
+          if (postCount === 0) {
+            const unlinkedPost = await Post.findOne({ $or: [{ course: null }, { course: { $exists: false } }], status: "published" });
+            if (unlinkedPost) {
+              unlinkedPost.course = course._id;
+              await unlinkedPost.save();
+              console.log(`\u{1F517} Self-Healed: Linked unlinked post "${unlinkedPost.title}" to course "${course.title}".`);
+            } else {
+              const anyPost = await Post.findOne({ status: "published" });
+              if (anyPost) {
+                await Post.create({
+                  title: anyPost.title,
+                  content: anyPost.content,
+                  author: anyPost.author,
+                  course: course._id,
+                  status: "published",
+                  tags: anyPost.tags,
+                  summary: anyPost.summary,
+                  coverImage: anyPost.coverImage
+                });
+                console.log(`\u{1F517} Self-Healed: Cloned and linked post "${anyPost.title}" to course "${course.title}".`);
+              }
+            }
+          }
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Error in updateSystemStats self-healing database:", err);
       }
     } else {
       memoryDB.siteSettings.stats.coursesCount = memoryDB.courses.length;
@@ -822,27 +958,42 @@ async function startServer() {
     res.json({ success: true, message: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u0645\u062F\u06CC\u0631 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u062A\u063A\u06CC\u06CC\u0631 \u06A9\u0631\u062F" });
   });
   app.post("/api/profile/update", async (req, res) => {
-    const { userId, name, email, password, profilePicture } = req.body;
+    const { userId, name, email, oldPassword, newPassword, profilePicture, gender } = req.body;
     if (!userId) {
       return res.status(400).json({ error: "\u0634\u0646\u0627\u0633\u0647 \u06A9\u0627\u0631\u0628\u0631 \u0627\u0644\u0632\u0627\u0645\u06CC \u0627\u0633\u062A" });
     }
-    if (isDBConnected) {
-      const user = await User.findById(userId);
-      if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
-      if (name) user.name = name;
-      if (email) user.email = email.toLowerCase().trim();
-      if (password) user.password = password;
-      if (profilePicture) user.profilePicture = profilePicture;
-      await user.save();
-    } else {
-      const user = memoryDB.users.find((u) => u._id === userId);
-      if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
-      if (name) user.name = name;
-      if (email) user.email = email.toLowerCase().trim();
-      if (password) user.password = password;
-      if (profilePicture) user.profilePicture = profilePicture;
+    try {
+      if (isDBConnected) {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        if (newPassword) {
+          if (user.password && user.password !== oldPassword) {
+            return res.status(400).json({ error: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u0641\u0639\u0644\u06CC \u0627\u0634\u062A\u0628\u0627\u0647 \u0627\u0633\u062A" });
+          }
+          user.password = newPassword;
+        }
+        if (name) user.name = name;
+        if (email) user.email = email.toLowerCase().trim();
+        if (profilePicture) user.profilePicture = profilePicture;
+        await user.save();
+      } else {
+        const user = memoryDB.users.find((u) => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        if (newPassword) {
+          if (user.password && user.password !== oldPassword) {
+            return res.status(400).json({ error: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u0641\u0639\u0644\u06CC \u0627\u0634\u062A\u0628\u0627\u0647 \u0627\u0633\u062A" });
+          }
+          user.password = newPassword;
+        }
+        if (name) user.name = name;
+        if (email) user.email = email.toLowerCase().trim();
+        if (profilePicture) user.profilePicture = profilePicture;
+        if (gender !== void 0) user.gender = gender;
+      }
+      res.json({ success: true, message: "\u067E\u0631\u0648\u0641\u0627\u06CC\u0644 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F" });
+    } catch (err) {
+      res.status(500).json({ error: "\u062E\u0637\u0627 \u062F\u0631 \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u067E\u0631\u0648\u0641\u0627\u06CC\u0644" });
     }
-    res.json({ success: true, message: "\u067E\u0631\u0648\u0641\u0627\u06CC\u0644 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F" });
   });
   app.post("/api/requests/submit", async (req, res) => {
     const { name, email, bio } = req.body;
@@ -908,6 +1059,13 @@ async function startServer() {
         });
         requestItem.status = "approved";
         await requestItem.save();
+        await Notification2.create({
+          userId: null,
+          targetRole: "author",
+          title: "\u062A\u0628\u0631\u06CC\u06A9! \u062D\u0633\u0627\u0628 \u06A9\u0627\u0631\u0628\u0631\u06CC \u0634\u0645\u0627 \u062A\u0627\u06CC\u06CC\u062F \u0634\u062F",
+          content: `\u0647\u0645\u06A9\u0627\u0631 \u06AF\u0631\u0627\u0645\u06CC ${requestItem.name}\u060C \u062F\u0631\u062E\u0648\u0627\u0633\u062A \u0634\u0645\u0627 \u0628\u0631\u0627\u06CC \u0639\u0636\u0648\u06CC\u062A \u062F\u0631 \u062A\u06CC\u0645 \u0639\u0644\u0645\u06CC \u062A\u0627\u06CC\u06CC\u062F \u0634\u062F.`,
+          isRead: false
+        });
       } else {
         const newUserId = "user-gen-" + Date.now();
         memoryDB.users.push({
@@ -920,9 +1078,21 @@ async function startServer() {
           profilePicture: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200",
           resetPasswordRequested: false,
           temporaryPassword: "",
+          bookmarks: [],
+          readingHistory: [],
+          progress: [],
           createdAt: /* @__PURE__ */ new Date()
         });
         requestItem.status = "approved";
+        memoryDB.notifications.unshift({
+          _id: "notif-" + Date.now(),
+          userId: null,
+          targetRole: "author",
+          title: "\u062A\u0628\u0631\u06CC\u06A9! \u062D\u0633\u0627\u0628 \u06A9\u0627\u0631\u0628\u0631\u06CC \u0634\u0645\u0627 \u062A\u0627\u06CC\u06CC\u062F \u0634\u062F",
+          content: `\u0647\u0645\u06A9\u0627\u0631 \u06AF\u0631\u0627\u0645\u06CC ${requestItem.name}\u060C \u062F\u0631\u062E\u0648\u0627\u0633\u062A \u0634\u0645\u0627 \u0628\u0631\u0627\u06CC \u0639\u0636\u0648\u06CC\u062A \u062F\u0631 \u062A\u06CC\u0645 \u0639\u0644\u0645\u06CC \u062A\u0627\u06CC\u06CC\u062F \u0634\u062F.`,
+          isRead: false,
+          createdAt: /* @__PURE__ */ new Date()
+        });
       }
       await updateSystemStats();
       successMessage = `\u062D\u0633\u0627\u0628 \u06A9\u0627\u0631\u0628\u0631\u06CC \u0646\u0648\u06CC\u0633\u0646\u062F\u0647 \u062A\u0623\u06CC\u06CC\u062F \u0634\u062F. \u0627\u06CC\u0645\u06CC\u0644 \u0627\u0631\u0633\u0627\u0644 \u06AF\u0631\u062F\u06CC\u062F.`;
@@ -988,57 +1158,77 @@ async function startServer() {
     res.json(safeUsers);
   });
   app.post("/api/users/action", async (req, res) => {
-    const { userId, action, newPassword, newRole } = req.body;
-    if (!userId || !action) {
-      return res.status(400).json({ error: "\u0627\u0637\u0644\u0627\u0639\u0627\u062A \u0627\u0631\u0633\u0627\u0644\u06CC \u0646\u0627\u0642\u0635 \u0627\u0633\u062A" });
-    }
-    if (isDBConnected) {
-      const user = await User.findById(userId);
-      if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
-      if (action === "suspend") {
-        user.isSuspended = true;
-        await user.save();
-      } else if (action === "unsuspend") {
-        user.isSuspended = false;
-        await user.save();
-      } else if (action === "changeRole") {
-        if (newRole === "admin" || newRole === "author") {
-          user.role = newRole;
+    try {
+      const { userId, action, newPassword, newRole } = req.body;
+      if (!userId || !action) {
+        return res.status(400).json({ error: "\u0627\u0637\u0644\u0627\u0639\u0627\u062A \u0627\u0631\u0633\u0627\u0644\u06CC \u0646\u0627\u0642\u0635 \u0627\u0633\u062A" });
+      }
+      if (isDBConnected) {
+        let user = null;
+        try {
+          user = await User.findById(userId);
+        } catch (e) {
+        }
+        if (!user) {
+          try {
+            user = await User.findOne({ _id: userId });
+          } catch (e) {
+          }
+        }
+        if (!user) {
+          user = await User.findOne({ email: userId });
+        }
+        if (!user) {
+          return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        }
+        if (action === "suspend") {
+          user.isSuspended = true;
           await user.save();
+        } else if (action === "unsuspend") {
+          user.isSuspended = false;
+          await user.save();
+        } else if (action === "changeRole") {
+          if (newRole === "admin" || newRole === "author" || newRole === "student") {
+            user.role = newRole;
+            await user.save();
+          }
+        } else if (action === "changePassword") {
+          if (!newPassword || newPassword.trim().length < 4) {
+            return res.status(400).json({ error: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062C\u062F\u06CC\u062F \u0628\u0627\u06CC\u062F \u062D\u062F\u0627\u0642\u0644 \u06F4 \u06A9\u0627\u0631\u0627\u06A9\u062A\u0631 \u0628\u0627\u0634\u062F" });
+          }
+          user.password = newPassword.trim();
+          user.temporaryPassword = "";
+          await user.save();
+        } else if (action === "delete") {
+          await User.deleteOne({ _id: user._id });
         }
-      } else if (action === "changePassword") {
-        if (!newPassword || newPassword.trim().length < 4) {
-          return res.status(400).json({ error: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062C\u062F\u06CC\u062F \u0628\u0627\u06CC\u062F \u062D\u062F\u0627\u0642\u0644 \u06F4 \u06A9\u0627\u0631\u0627\u06A9\u062A\u0631 \u0628\u0627\u0634\u062F" });
+      } else {
+        const user = memoryDB.users.find((u) => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        if (action === "suspend") {
+          user.isSuspended = true;
+        } else if (action === "unsuspend") {
+          user.isSuspended = false;
+        } else if (action === "changeRole") {
+          if (newRole === "admin" || newRole === "author" || newRole === "student") {
+            user.role = newRole;
+          }
+        } else if (action === "changePassword") {
+          if (!newPassword || newPassword.trim().length < 4) {
+            return res.status(400).json({ error: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062C\u062F\u06CC\u062F \u0628\u0627\u06CC\u062F \u062D\u062F\u0627\u0642\u0644 \u06F4 \u06A9\u0627\u0631\u0627\u06A9\u062A\u0631 \u0628\u0627\u0634\u062F" });
+          }
+          user.password = newPassword.trim();
+          user.temporaryPassword = "";
+        } else if (action === "delete") {
+          memoryDB.users = memoryDB.users.filter((u) => u._id !== userId && u.id !== userId);
         }
-        user.password = newPassword.trim();
-        user.temporaryPassword = "";
-        await user.save();
-      } else if (action === "delete") {
-        await User.deleteOne({ _id: userId });
       }
-    } else {
-      const user = memoryDB.users.find((u) => u._id === userId || u.id === userId);
-      if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
-      if (action === "suspend") {
-        user.isSuspended = true;
-      } else if (action === "unsuspend") {
-        user.isSuspended = false;
-      } else if (action === "changeRole") {
-        if (newRole === "admin" || newRole === "author") {
-          user.role = newRole;
-        }
-      } else if (action === "changePassword") {
-        if (!newPassword || newPassword.trim().length < 4) {
-          return res.status(400).json({ error: "\u0631\u0645\u0632 \u0639\u0628\u0648\u0631 \u062C\u062F\u06CC\u062F \u0628\u0627\u06CC\u062F \u062D\u062F\u0627\u0642\u0644 \u06F4 \u06A9\u0627\u0631\u0627\u06A9\u062A\u0631 \u0628\u0627\u0634\u062F" });
-        }
-        user.password = newPassword.trim();
-        user.temporaryPassword = "";
-      } else if (action === "delete") {
-        memoryDB.users = memoryDB.users.filter((u) => u._id !== userId && u.id !== userId);
-      }
+      await updateSystemStats();
+      res.json({ success: true, message: "\u0639\u0645\u0644\u06CC\u0627\u062A \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0627\u0646\u062C\u0627\u0645 \u0634\u062F" });
+    } catch (err) {
+      console.error("Error in /api/users/action:", err);
+      res.status(500).json({ error: err.message || "\u062E\u0637\u0627\u06CC \u0633\u0631\u0648\u0631" });
     }
-    await updateSystemStats();
-    res.json({ success: true, message: "\u0639\u0645\u0644\u06CC\u0627\u062A \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0627\u0646\u062C\u0627\u0645 \u0634\u062F" });
   });
   app.get("/api/courses", async (req, res) => {
     let courses = [];
@@ -1080,8 +1270,12 @@ async function startServer() {
         query.author = authorId;
         delete query.status;
       }
-      if (courseId) {
-        query.course = courseId;
+      if (courseId && courseId !== "undefined" && courseId !== "null" && courseId !== "") {
+        if (typeof courseId === "string" && courseId.match(/^[0-9a-fA-F]{24}$/)) {
+          query.course = courseId;
+        } else {
+          query.course = null;
+        }
       }
       posts = await Post.find(query).populate("author", "name email profilePicture").populate("course", "title").sort({ createdAt: -1 });
     } else {
@@ -1220,6 +1414,41 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
+  app.delete("/api/courses/:id", async (req, res) => {
+    const { id } = req.params;
+    if (isDBConnected) {
+      await Course.deleteOne({ _id: id });
+      await Post.updateMany({ course: id }, { $set: { course: null } });
+    } else {
+      memoryDB.courses = memoryDB.courses.filter((c) => c._id !== id);
+      memoryDB.posts = memoryDB.posts.map((p) => p.course === id ? { ...p, course: null } : p);
+    }
+    await updateSystemStats();
+    res.json({ success: true, message: "\u062F\u0648\u0631\u0647 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u062D\u0630\u0641 \u0634\u062F" });
+  });
+  app.post("/api/courses/update", async (req, res) => {
+    const { courseId, title, description, syllabus } = req.body;
+    if (!courseId || !title) {
+      return res.status(400).json({ error: "\u0627\u0637\u0644\u0627\u0639\u0627\u062A \u062F\u0648\u0631\u0647 \u0646\u0627\u0642\u0635 \u0627\u0633\u062A" });
+    }
+    if (isDBConnected) {
+      await Course.updateOne(
+        { _id: courseId },
+        { $set: { title, description, syllabus: syllabus || [] } }
+      );
+    } else {
+      const idx = memoryDB.courses.findIndex((c) => c._id === courseId);
+      if (idx !== -1) {
+        memoryDB.courses[idx] = {
+          ...memoryDB.courses[idx],
+          title,
+          description: description || "",
+          syllabus: syllabus || []
+        };
+      }
+    }
+    res.json({ success: true, message: "\u062F\u0648\u0631\u0647 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0628\u0631\u0648\u0632\u0631\u0633\u0627\u0646\u06CC \u0634\u062F" });
+  });
   app.post("/api/posts/action", async (req, res) => {
     const { postId, action, reason } = req.body;
     if (!postId || !action) {
@@ -1342,7 +1571,7 @@ async function startServer() {
 3. 'quote': \u0628\u0631\u0627\u06CC \u06A9\u0644\u0645\u0627\u062A \u0642\u0635\u0627\u0631\u060C \u062A\u0648\u0635\u06CC\u0647\u200C\u0647\u0627 \u06CC\u0627 \u0647\u0634\u062F\u0627\u0631\u0647\u0627\u06CC \u0645\u0647\u0645 \u06CC\u06A9 \u062F\u0646\u062F\u0627\u0646\u067E\u0632\u0634\u06A9 \u0628\u0631\u062C\u0633\u062A\u0647.
 4. 'list': \u0628\u0631\u0627\u06CC \u062F\u0633\u062A\u0647\u200C\u0628\u0646\u062F\u06CC \u0645\u0631\u0627\u062D\u0644 \u062F\u0631\u0645\u0627\u0646\u060C \u062A\u062F\u0627\u062E\u0644\u200C\u0647\u0627\u06CC \u062F\u0627\u0631\u0648\u06CC\u06CC\u060C \u062A\u062C\u0647\u06CC\u0632\u0627\u062A \u06CC\u0627 \u0631\u0627\u0647\u0646\u0645\u0627\u0647\u0627\u06CC \u0633\u0631\u06CC\u0639.`;
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt,
         config: {
           systemInstruction: "\u0634\u0645\u0627 \u0645\u0642\u0627\u0644\u0627\u062A \u0639\u0644\u0645\u06CC \u062F\u0646\u062F\u0627\u0646\u067E\u0632\u0634\u06A9\u06CC \u0628\u0627 \u062F\u0642\u062A \u06F1\u06F0\u06F0\u066A \u0628\u0627\u0644\u06CC\u0646\u06CC \u0648 \u0627\u0635\u0637\u0644\u0627\u062D\u0627\u062A \u067E\u0632\u0634\u06A9\u06CC \u0648 \u062F\u0646\u062F\u0627\u0646\u067E\u0632\u0634\u06A9\u06CC \u0645\u0639\u062A\u0628\u0631 \u0628\u0647 \u0632\u0628\u0627\u0646 \u0641\u0627\u0631\u0633\u06CC \u062A\u0648\u0644\u06CC\u062F \u0645\u06CC\u200C\u06A9\u0646\u06CC\u062F.",
@@ -1673,8 +1902,8 @@ async function startServer() {
     }
   });
   app.post("/api/auth/register-student", async (req, res) => {
-    const { name, email, password, phoneNumber, otpCode } = req.body;
-    if (!name || !email || !password || !phoneNumber || !otpCode) {
+    const { name, email, password, phoneNumber, otpCode, gender } = req.body;
+    if (!name || !email || !password || !phoneNumber || !otpCode || !gender) {
       return res.status(400).json({ error: "\u067E\u0631 \u06A9\u0631\u062F\u0646 \u062A\u0645\u0627\u0645\u06CC \u0641\u06CC\u0644\u062F\u0647\u0627 \u0627\u0644\u0632\u0627\u0645\u06CC \u0627\u0633\u062A" });
     }
     const cleanEmail = email.toLowerCase().trim();
@@ -1691,12 +1920,12 @@ async function startServer() {
           email: email.toLowerCase().trim(),
           password,
           phoneNumber,
+          gender,
           role: "student",
           profilePicture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
           bookmarks: [],
           readingHistory: [],
-          progress: [],
-          certificates: []
+          progress: []
         });
         await AuditLog.create({
           actorName: "\u0633\u0627\u0645\u0627\u0646\u0647 \u062F\u0646\u062A\u0627\u0644\u0641\u0627\u06CC",
@@ -1715,11 +1944,11 @@ async function startServer() {
             name: newUser.name,
             email: newUser.email,
             role: newUser.role,
+            gender: newUser.gender,
             phoneNumber: newUser.phoneNumber,
             bookmarks: [],
             readingHistory: [],
-            progress: [],
-            certificates: []
+            progress: []
           }
         });
       } else {
@@ -1732,12 +1961,12 @@ async function startServer() {
           email: email.toLowerCase().trim(),
           password,
           phoneNumber,
+          gender,
           role: "student",
           profilePicture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
           bookmarks: [],
           readingHistory: [],
           progress: [],
-          certificates: [],
           createdAt: /* @__PURE__ */ new Date()
         };
         memoryDB.users.push(newUserObj);
@@ -1763,11 +1992,11 @@ async function startServer() {
             name,
             email,
             role: "student",
+            gender,
             phoneNumber,
             bookmarks: [],
             readingHistory: [],
-            progress: [],
-            certificates: []
+            progress: []
           }
         });
       }
@@ -1776,8 +2005,8 @@ async function startServer() {
     }
   });
   app.post("/api/auth/register-author", async (req, res) => {
-    const { name, email, password, phoneNumber, bio, otpCode } = req.body;
-    if (!name || !email || !password || !phoneNumber || !otpCode) {
+    const { name, email, password, phoneNumber, gender, bio, otpCode } = req.body;
+    if (!name || !email || !password || !phoneNumber || !otpCode || !gender) {
       return res.status(400).json({ error: "\u067E\u0631 \u06A9\u0631\u062F\u0646 \u062A\u0645\u0627\u0645\u06CC \u0641\u06CC\u0644\u062F\u0647\u0627\u06CC \u0627\u0644\u0632\u0627\u0645\u06CC \u0627\u0633\u062A" });
     }
     const cleanEmail = email.toLowerCase().trim();
@@ -1796,6 +2025,7 @@ async function startServer() {
           email: cleanEmail,
           password,
           phoneNumber,
+          gender,
           bio,
           status: "pending"
         });
@@ -1844,7 +2074,7 @@ async function startServer() {
         await user.save();
         res.json({ success: true, bookmarks: user.bookmarks });
       } else {
-        const user = memoryDB.users.find((u) => u._id === userId);
+        const user = memoryDB.users.find((u) => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
         const index = user.bookmarks.indexOf(postId);
         if (index > -1) {
@@ -1918,6 +2148,44 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
+  app.delete("/api/student/history/:userId", async (req, res) => {
+    const { userId } = req.params;
+    try {
+      if (isDBConnected) {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        user.readingHistory = [];
+        await user.save();
+        res.json({ success: true, history: [] });
+      } else {
+        const user = memoryDB.users.find((u) => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        user.readingHistory = [];
+        res.json({ success: true, history: [] });
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  app.delete("/api/student/history/:userId/:itemId", async (req, res) => {
+    const { userId, itemId } = req.params;
+    try {
+      if (isDBConnected) {
+        const user = await User.findById(userId);
+        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        user.readingHistory = user.readingHistory.filter((h) => h.itemId !== itemId);
+        await user.save();
+        res.json({ success: true, history: user.readingHistory });
+      } else {
+        const user = memoryDB.users.find((u) => u._id === userId || u.id === userId);
+        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        user.readingHistory = user.readingHistory.filter((h) => h.itemId !== itemId);
+        res.json({ success: true, history: user.readingHistory });
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   app.post("/api/student/progress", async (req, res) => {
     const { userId, courseId, postId } = req.body;
     if (!userId || !courseId || !postId) {
@@ -1945,42 +2213,20 @@ async function startServer() {
           progIndex = user.progress.length - 1;
         } else {
           const completed = user.progress[progIndex].completedLessons;
-          if (!completed.includes(postId)) {
+          const posIdx = completed.indexOf(postId);
+          if (posIdx === -1) {
             completed.push(postId);
+          } else {
+            completed.splice(posIdx, 1);
           }
         }
         const complCount = user.progress[progIndex].completedLessons.length;
         user.progress[progIndex].percentage = Math.min(100, Math.round(complCount / totalLessons * 100));
         let newlyIssued = false;
-        let certificateId = "";
-        if (user.progress[progIndex].percentage === 100) {
-          const certExists = user.certificates.some((c) => c.courseId === courseId);
-          if (!certExists) {
-            certificateId = "CERT-" + Math.floor(1e5 + Math.random() * 9e5);
-            user.certificates.push({
-              certificateId,
-              courseId,
-              courseTitle,
-              studentName: user.name,
-              issuedAt: /* @__PURE__ */ new Date()
-            });
-            newlyIssued = true;
-            await AuditLog.create({
-              actorName: "\u0633\u06CC\u0633\u062A\u0645 \u0635\u062F\u0648\u0631 \u0633\u0631\u062A\u06CC\u0641\u06CC\u06A9\u06CC\u062A",
-              action: "\u0635\u062F\u0648\u0631 \u062E\u0648\u062F\u06A9\u0627\u0631 \u06AF\u0648\u0627\u0647\u06CC\u0646\u0627\u0645\u0647",
-              target: `${user.name} \u0628\u0631\u0627\u06CC \u062F\u0648\u0631\u0647 ${courseTitle}`
-            });
-            await Notification2.create({
-              userId,
-              title: "\u0635\u062F\u0648\u0631 \u06AF\u0648\u0627\u0647\u06CC\u0646\u0627\u0645\u0647 \u062F\u06CC\u062C\u06CC\u062A\u0627\u0644",
-              content: `\u062A\u0628\u0631\u06CC\u06A9! \u0634\u0645\u0627 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u062F\u0648\u0631\u0647 "${courseTitle}" \u0631\u0627 \u0628\u0647 \u0627\u062A\u0645\u0627\u0645 \u0631\u0633\u0627\u0646\u062F\u06CC\u062F \u0648 \u06AF\u0648\u0627\u0647\u06CC\u0646\u0627\u0645\u0647 \u0645\u0639\u062A\u0628\u0631 \u0635\u0627\u062F\u0631 \u0634\u062F.`
-            });
-          }
-        }
         await user.save();
-        res.json({ success: true, progress: user.progress[progIndex], newlyIssued, certificateId });
+        res.json({ success: true, progress: user.progress[progIndex], newlyIssued });
       } else {
-        const user = memoryDB.users.find((u) => u._id === userId);
+        const user = memoryDB.users.find((u) => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
         let progIndex = user.progress.findIndex((p) => p.courseId === courseId);
         if (progIndex === -1) {
@@ -1988,44 +2234,17 @@ async function startServer() {
           progIndex = user.progress.length - 1;
         } else {
           const completed = user.progress[progIndex].completedLessons;
-          if (!completed.includes(postId)) {
+          const posIdx = completed.indexOf(postId);
+          if (posIdx === -1) {
             completed.push(postId);
+          } else {
+            completed.splice(posIdx, 1);
           }
         }
         const complCount = user.progress[progIndex].completedLessons.length;
         user.progress[progIndex].percentage = Math.min(100, Math.round(complCount / totalLessons * 100));
         let newlyIssued = false;
-        let certificateId = "";
-        if (user.progress[progIndex].percentage === 100) {
-          const certExists = user.certificates.some((c) => c.courseId === courseId);
-          if (!certExists) {
-            certificateId = "CERT-" + Math.floor(1e5 + Math.random() * 9e5);
-            user.certificates.push({
-              certificateId,
-              courseId,
-              courseTitle,
-              studentName: user.name,
-              issuedAt: /* @__PURE__ */ new Date()
-            });
-            newlyIssued = true;
-            memoryDB.auditLogs.unshift({
-              _id: "log-" + Date.now(),
-              actorName: "\u0633\u06CC\u0633\u062A\u0645 \u0635\u062F\u0648\u0631 \u0633\u0631\u062A\u06CC\u0641\u06CC\u06A9\u06CC\u062A",
-              action: "\u0635\u062F\u0648\u0631 \u062E\u0648\u062F\u06A9\u0627\u0631 \u06AF\u0648\u0627\u0647\u06CC\u0646\u0627\u0645\u0647",
-              target: `${user.name} \u0628\u0631\u0627\u06CC \u062F\u0648\u0631\u0647 ${courseTitle}`,
-              createdAt: /* @__PURE__ */ new Date()
-            });
-            memoryDB.notifications.unshift({
-              _id: "not-" + Date.now(),
-              userId,
-              title: "\u0635\u062F\u0648\u0631 \u06AF\u0648\u0627\u0647\u06CC\u0646\u0627\u0645\u0647 \u062F\u06CC\u062C\u06CC\u062A\u0627\u0644",
-              content: `\u062A\u0628\u0631\u06CC\u06A9! \u0634\u0645\u0627 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u062F\u0648\u0631\u0647 "${courseTitle}" \u0631\u0627 \u0628\u0647 \u0627\u062A\u0645\u0627\u0645 \u0631\u0633\u0627\u0646\u062F\u06CC\u062F \u0648 \u06AF\u0648\u0627\u0647\u06CC\u0646\u0627\u0645\u0647 \u0645\u0639\u062A\u0628\u0631 \u0635\u0627\u062F\u0631 \u0634\u062F.`,
-              isRead: false,
-              createdAt: /* @__PURE__ */ new Date()
-            });
-          }
-        }
-        res.json({ success: true, progress: user.progress[progIndex], newlyIssued, certificateId });
+        res.json({ success: true, progress: user.progress[progIndex], newlyIssued });
       }
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -2049,22 +2268,6 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
-  app.get("/api/student/certificates/:userId", async (req, res) => {
-    const { userId } = req.params;
-    try {
-      if (isDBConnected) {
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
-        res.json(user.certificates || []);
-      } else {
-        const user = memoryDB.users.find((u) => u._id === userId);
-        if (!user) return res.status(404).json({ error: "\u06A9\u0627\u0631\u0628\u0631 \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
-        res.json(user.certificates || []);
-      }
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  });
   app.post("/api/courses/:courseId/review", async (req, res) => {
     const { courseId } = req.params;
     const { studentName, studentEmail, rating, comment } = req.body;
@@ -2079,8 +2282,8 @@ async function startServer() {
           studentEmail: studentEmail || "info@student.local",
           rating,
           comment,
-          isApproved: false
-          // Requires admin moderation
+          isApproved: true
+          // Auto-approved for demo
         });
         await Notification2.create({
           targetRole: "admin",
@@ -2175,8 +2378,8 @@ async function startServer() {
           studentName,
           studentEmail: studentEmail || "anonymous@dentalfy.local",
           question,
-          isApproved: false
-          // Moderator approves before showing on study tab
+          isApproved: true
+          // Auto-approved for demo
         });
         await AuditLog.create({
           actorName: studentName,
@@ -2338,7 +2541,7 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
-  app.post("/api/courses/:courseId/quiz/generate-ai", async (req, res) => {
+  app.post(["/api/courses/:courseId/quiz/generate", "/api/courses/:courseId/quiz/generate-ai"], async (req, res) => {
     const { courseId } = req.params;
     const apiKey = process.env.GEMINI_API_KEY;
     let cTitle = "";
@@ -2391,7 +2594,7 @@ async function startServer() {
 ]
 \u0644\u0637\u0641\u0627\u064B \u0645\u0637\u0645\u0626\u0646 \u0634\u0648\u06CC\u062F \u0633\u0627\u062E\u062A\u0627\u0631 \u06A9\u0627\u0645\u0644\u0627 \u0645\u0639\u062A\u0628\u0631 \u0627\u0633\u062A \u0648 \u0627\u0632 \u0622\u0648\u0631\u062F\u0646 \u0645\u0627\u0631\u06A9\u200C\u062F\u0627\u0648\u0646 \u06CC\u0627 \u06A9\u0644\u0645\u0627\u062A \u0627\u0636\u0627\u0641\u06CC \u062E\u0648\u062F\u062F\u0627\u0631\u06CC \u06A9\u0646\u06CC\u062F.`;
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt
       });
       let responseText = response.text || "";
@@ -2466,6 +2669,25 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
+  app.delete("/api/categories/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      if (isDBConnected) {
+        await Category.findByIdAndDelete(id);
+        res.json({ success: true });
+      } else {
+        const index = memoryDB.categories.findIndex((c) => c._id === id);
+        if (index !== -1) {
+          memoryDB.categories.splice(index, 1);
+          res.json({ success: true });
+        } else {
+          res.status(404).json({ error: "\u062F\u0633\u062A\u0647\u200C\u0628\u0646\u062F\u06CC \u06CC\u0627\u0641\u062A \u0646\u0634\u062F" });
+        }
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   app.get("/api/notifications", async (req, res) => {
     const { userId, role } = req.query;
     try {
@@ -2495,6 +2717,28 @@ async function startServer() {
       } else {
         const n = memoryDB.notifications.find((not) => not._id === notificationId);
         if (n) n.isRead = true;
+        res.json({ success: true });
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  app.post("/api/notifications/read-all", async (req, res) => {
+    const { userId, role } = req.body;
+    try {
+      if (isDBConnected) {
+        const query = { $or: [] };
+        if (userId) query.$or.push({ userId });
+        if (role) query.$or.push({ targetRole: role });
+        query.$or.push({ userId: null, targetRole: null });
+        await Notification2.updateMany(query, { $set: { isRead: true } });
+        res.json({ success: true });
+      } else {
+        memoryDB.notifications.forEach((n) => {
+          if (!n.userId || n.userId === userId || n.targetRole === role) {
+            n.isRead = true;
+          }
+        });
         res.json({ success: true });
       }
     } catch (err) {
@@ -2727,7 +2971,7 @@ async function startServer() {
       const ai = new GoogleGenAI2({ apiKey });
       const prompt = `\u0634\u0645\u0627 \u06CC\u06A9 \u062F\u0633\u062A\u06CC\u0627\u0631 \u0647\u0648\u0634 \u0645\u0635\u0646\u0648\u0639\u06CC \u0648 \u0645\u062A\u062E\u0635\u0635 \u0622\u0645\u0648\u0632\u0634 \u062F\u0646\u062F\u0627\u0646\u067E\u0632\u0634\u06A9\u06CC \u062F\u0631 \u067E\u0644\u062A\u0641\u0631\u0645 \u062F\u0646\u062A\u0627\u0644\u0641\u0627\u06CC (dentalfy) \u0647\u0633\u062A\u06CC\u062F. \u0628\u0647 \u0632\u0628\u0627\u0646 \u0641\u0627\u0631\u0633\u06CC \u0634\u06CC\u0648\u0627\u060C \u0639\u0644\u0645\u06CC \u0648 \u0631\u0648\u0627\u0646 \u067E\u0627\u0633\u062E \u062F\u0647\u06CC\u062F. \u0633\u0648\u0627\u0644 \u06A9\u0627\u0631\u0628\u0631: ${message}`;
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt
       });
       res.json({

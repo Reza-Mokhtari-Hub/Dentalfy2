@@ -6,6 +6,7 @@ export interface IUser extends Document {
   email: string;
   password?: string;
   role: "admin" | "author" | "student";
+  gender?: "male" | "female" | "other" | "";
   profilePicture: string;
   resetPasswordRequested: boolean;
   temporaryPassword?: string;
@@ -23,13 +24,6 @@ export interface IUser extends Document {
     completedLessons: string[]; // array of post IDs
     percentage: number;
   }[];
-  certificates: {
-    certificateId: string;
-    courseId: string;
-    courseTitle: string;
-    studentName: string;
-    issuedAt: Date;
-  }[];
   createdAt: Date;
 }
 
@@ -38,6 +32,7 @@ const UserSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
   role: { type: String, enum: ["admin", "author", "student"], default: "student" },
+  gender: { type: String, enum: ["male", "female", "other", ""], default: "" },
   profilePicture: { type: String, default: "" },
   resetPasswordRequested: { type: Boolean, default: false },
   temporaryPassword: { type: String, default: "" },
@@ -54,13 +49,6 @@ const UserSchema = new Schema<IUser>({
     courseId: { type: String, required: true },
     completedLessons: { type: [String], default: [] },
     percentage: { type: Number, default: 0 }
-  }],
-  certificates: [{
-    certificateId: { type: String, required: true },
-    courseId: { type: String, required: true },
-    courseTitle: { type: String, required: true },
-    studentName: { type: String, required: true },
-    issuedAt: { type: Date, default: Date.now }
   }],
   createdAt: { type: Date, default: Date.now }
 });
@@ -175,6 +163,7 @@ export interface IAccountRequest extends Document {
   bio: string;
   password?: string;
   phoneNumber?: string;
+  gender?: "male" | "female" | "other" | "";
   status: "pending" | "approved" | "rejected";
   createdAt: Date;
 }
@@ -185,6 +174,7 @@ const AccountRequestSchema = new Schema<IAccountRequest>({
   bio: { type: String, default: "" },
   password: { type: String },
   phoneNumber: { type: String },
+  gender: { type: String, default: "" },
   status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
   createdAt: { type: Date, default: Date.now }
 });
