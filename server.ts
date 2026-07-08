@@ -11,6 +11,10 @@ import {
 
 const Notification = DBNotification;
 export async function startServer() {
+  console.log("🛠️ Initializing server...");
+  console.log("📝 MONGODB_URI exists:", !!process.env.MONGODB_URI);
+  console.log("📝 CLOUDINARY_URL exists:", !!process.env.CLOUDINARY_URL);
+  
   const app = express();
 
   const useCloudinary = !!(
@@ -2844,6 +2848,7 @@ export async function startServer() {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+  const PORT = 3000;
   if (!process.env.VERCEL) {
 
     app.listen(PORT, "0.0.0.0", () => {
