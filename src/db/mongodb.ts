@@ -1,10 +1,6 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI || "";
 
-if (!MONGODB_URI) {
-  console.warn("⚠️ MONGODB_URI is not defined in environment variables. Database connections will fail.");
-}
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -20,6 +16,12 @@ if (!(global as any).mongoose) {
 }
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
+  const MONGODB_URI = process.env.MONGODB_URI || "";
+  if (!MONGODB_URI) {
+    console.warn("⚠️ MONGODB_URI is not defined in environment variables. Database connections will fail.");
+    throw new Error("MONGODB_URI missing");
+  }
+
   if (cached.conn) {
     return cached.conn;
   }

@@ -10,35 +10,31 @@ import {
 } from "./src/db/models";
 
 const Notification = DBNotification;
-
-// Configure Cloudinary if credentials are provided
-const useCloudinary = !!(
-  process.env.CLOUDINARY_URL ||
-  (process.env.CLOUDINARY_CLOUD_NAME &&
-    process.env.CLOUDINARY_API_KEY &&
-    process.env.CLOUDINARY_API_SECRET)
-);
-
-if (useCloudinary) {
-  if (process.env.CLOUDINARY_URL) {
-    cloudinary.config();
-    console.log("☁️ Cloudinary is configured and active using CLOUDINARY_URL.");
-  } else {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
-    console.log("☁️ Cloudinary is configured and active.");
-  }
-} else {
-  console.warn("⚠️ Cloudinary credentials not fully specified. Falling back to local Base64 media storage.");
-}
-
 export async function startServer() {
   const app = express();
-  const PORT = 3000;
 
+  const useCloudinary = !!(
+    process.env.CLOUDINARY_URL ||
+    (process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET)
+  );
+
+  if (useCloudinary) {
+    if (process.env.CLOUDINARY_URL) {
+      cloudinary.config();
+      console.log("☁️ Cloudinary is configured and active using CLOUDINARY_URL.");
+    } else {
+      cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+      });
+      console.log("☁️ Cloudinary is configured and active.");
+    }
+  } else {
+    console.warn("⚠️ Cloudinary credentials not fully specified. Falling back to local Base64 media storage.");
+  }
   // Increase request size limit for PDF, image, video uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
