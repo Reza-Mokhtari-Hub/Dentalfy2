@@ -3,7 +3,7 @@ import {
   Shield, BookOpen, FileText, Users, Settings, LogOut, Menu, X, 
   PlusCircle, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronUp, ChevronDown, 
   Upload, Download, HelpCircle, Lock, User, UserCog, RefreshCw, Eye, MessageSquare, Sparkles, Activity,
-  Key, Unlock, Camera, Award, Grid
+  Key, Unlock, Camera, Award, Grid, Search, Filter, ShieldCheck, CheckSquare, Square, UserCheck, AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { IUser, ICourse, IPost, ISiteSettings, IAccountRequest, IBlock, ILibraryDoc, IComment, IFAQ } from "../types";
@@ -91,10 +91,22 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     onConfirm: () => void | Promise<void>;
   } | null>(null);
 
-  // Users lists & user action states
+  // Users lists & user action states (RBAC)
   const [allUsers, setAllUsers] = useState<IUser[]>([]);
+  const [allAuthors, setAllAuthors] = useState<any[]>([]);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
+  const [selectedUserForRoleModal, setSelectedUserForRoleModal] = useState<IUser | null>(null);
+  const [targetRole, setTargetRole] = useState<"admin" | "editor" | "author" | "student">("author");
+  const [targetPermissions, setTargetPermissions] = useState<string[]>([]);
+  const [savingUserRole, setSavingUserRole] = useState(false);
   const [selectedUserToChangePassword, setSelectedUserToChangePassword] = useState<IUser | null>(null);
   const [newPasswordForUser, setNewPasswordForUser] = useState("");
+
+  // Post Search and Author Filter states
+  const [postSearchQuery, setPostSearchQuery] = useState("");
+  const [postAuthorFilter, setPostAuthorFilter] = useState("all");
+  const [postStatusFilter, setPostStatusFilter] = useState("all");
 
   // New Course Inputs
   const [newCourseTitle, setNewCourseTitle] = useState("");
@@ -143,6 +155,13 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
           const usrData = await usrRes.json();
           setAllUsers(usrData);
         }
+      }
+
+      // Fetch authors list
+      const authRes = await fetch("/api/authors");
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        setAllAuthors(authData);
       }
 
       // Fetch all courses and posts
@@ -230,6 +249,117 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     setGlobalMessage(msg);
     setTimeout(() => setGlobalMessage(null), 4000);
   };
+
+  // Helper to extract full text for block-level searching
+  const getPostFullText = (p: IPost): string => {
+    const parts: string[] = [];
+    if (p.title) parts.push(p.title);
+    if (p.summary) parts.push(p.summary);
+    if (p.seoTitle) parts.push(p.seoTitle);
+    if (p.seoDescription) parts.push(p.seoDescription);
+    if (Array.isArray(p.tags)) parts.push(p.tags.join(" "));
+    if (Array.isArray(p.content)) {
+      p.content.forEach((b: any) => {
+        if (!b || !b.value) return;
+        if (typeof b.value === "string") parts.push(b.value);
+        else if (typeof b.value === "object") {
+          if (b.value.text) parts.push(String(b.value.text));
+          if (b.value.caption) parts.push(String(b.value.caption));
+          if (b.value.author) parts.push(String(b.value.author));
+          if (Array.isArray(b.value.items)) parts.push(b.value.items.join(" "));
+        }
+      });
+    }
+    return parts.join(" ").toLowerCase();
+  };
+
+  const filteredPostsList = allPosts.filter((post) => {
+    // 1. Author Filter
+    if (postAuthorFilter !== "all") {
+      const aId = typeof post.author === "object" ? (post.author?._id || (post.author as any)?.id) : post.author;
+      if (aId !== postAuthorFilter) return false;
+    }
+
+    // 2. Status Filter
+    if (postStatusFilter !== "all") {
+      if (post.status !== postStatusFilter) return false;
+    }
+
+    // 3. Full-Text Search
+    if (postSearchQuery.trim()) {
+      const q = postSearchQuery.trim().toLowerCase();
+      const terms = q.split(/\s+/).filter(Boolean);
+      const fullText = getPostFullText(post);
+      const matches = terms.every(term => fullText.includes(term));
+      if (!matches) return false;
+    }
+
+    return true;
+  });
+
+  const filteredUsersList = allUsers.filter((user) => {
+    if (userRoleFilter !== "all") {
+      if (userRoleFilter === "suspended") {
+        if (!user.isSuspended) return false;
+      } else {
+        if (user.role !== userRoleFilter) return false;
+      }
+    }
+
+    if (userSearchQuery.trim()) {
+      const q = userSearchQuery.trim().toLowerCase();
+      const matchName = (user.name || "").toLowerCase().includes(q);
+      const matchEmail = (user.email || "").toLowerCase().includes(q);
+      if (!matchName && !matchEmail) return false;
+    }
+
+    return true;
+  });
+
+  const handleOpenRoleModal = (user: IUser) => {
+    setSelectedUserForRoleModal(user);
+    setTargetRole((user.role as any) || "author");
+    setTargetPermissions(user.permissions || []);
+  };
+
+  const handleSaveUserRole = async () => {
+    if (!selectedUserForRoleModal) return;
+    setSavingUserRole(true);
+    try {
+      const res = await fetch(`/api/users/${selectedUserForRoleModal.id || selectedUserForRoleModal._id}/role`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: targetRole,
+          permissions: targetPermissions,
+          actorName: currentUser.name
+        })
+      });
+      if (res.ok) {
+        showMessage(`نقش و دسترسی‌های کاربر ${selectedUserForRoleModal.name} با موفقیت ذخیره شد.`);
+        setSelectedUserForRoleModal(null);
+        fetchAdminLists();
+      } else {
+        const data = await res.json();
+        alert(data.error || "خطا در بروزرسانی نقش");
+      }
+    } catch (err) {
+      alert("خطا در برقراری ارتباط با سرور");
+    } finally {
+      setSavingUserRole(false);
+    }
+  };
+
+  const AVAILABLE_PERMISSIONS = [
+    { key: "posts:create", label: "نگارش و ایجاد مقالات علمی جدید", group: "مقالات" },
+    { key: "posts:publish", label: "انتشار مستقیم مقالات بدون نیاز به تایید مدیریت", group: "مقالات" },
+    { key: "posts:edit_all", label: "ویرایش و بازبینی مقالات تمامی نویسندگان", group: "مقالات" },
+    { key: "posts:delete", label: "حذف مقالات علمی از سیستم", group: "مقالات" },
+    { key: "courses:manage", label: "مدیریت و ایجاد سرفصل‌ها و دروس آکادمیک", group: "دروس" },
+    { key: "comments:manage", label: "تایید، پاسخ و مدیریت دیدگاه‌های کاربران", group: "دیدگاه‌ها" },
+    { key: "users:manage", label: "مدیریت کاربران، تغییر نقش و ارزیابی دسترسی‌ها", group: "کاربران" },
+    { key: "settings:manage", label: "تنظیمات عمومی سامانه، تغییر نام و قالب سایت", group: "سیستم" }
+  ];
 
   // Profile Picture Upload Handler (Supports drag-and-drop & click)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | React.DragEvent<HTMLDivElement>, target: "profile" | "coverImage" | { blockId: string }) => {
@@ -2174,80 +2304,178 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               </div>
             </div>
           ) : activeTab === "posts" ? (
-            /* --- POSTS MANAGER --- */
+            /* --- POSTS MANAGER WITH FULL-TEXT SEARCH & AUTHOR FILTERING --- */
             <div className="space-y-6">
-              <div className="flex items-center justify-between bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">لیست مطالب علمی شما</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm">
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-white leading-tight">
+                    {isAdmin ? "مدیریت و آرشیو جامع مقالات علمی" : "لیست مقالات و انتشارات علمی شما"}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-medium">جستجوی تمام‌متن در محتوا و فیلتر بر اساس نویسنده و وضعیت</p>
+                </div>
                 <button 
                   onClick={handleStartNewPost}
-                  className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                  className="px-5 py-3 bg-teal-600 hover:bg-teal-700 text-white text-xs font-black rounded-2xl shadow-lg shadow-teal-600/20 flex items-center gap-2 transition-all cursor-pointer self-start sm:self-auto"
                 >
-                  ثبت پست علمی جدید
+                  <PlusCircle className="w-4 h-4" /> ثبت مقاله جدید
                 </button>
               </div>
 
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
-                <table className="w-full text-right text-xs">
-                  <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px] uppercase tracking-wider">
-                      <th className="px-6 py-4 font-extrabold">عنوان مقاله</th>
-                      <th className="px-6 py-4 font-extrabold">مبحث درس</th>
-                      <th className="px-6 py-4 font-extrabold">وضعیت انتشار</th>
-                      <th className="px-6 py-4 font-extrabold">آخرین بروزرسانی</th>
-                      <th className="px-6 py-4 font-extrabold text-left">عملیات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {allPosts.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-8 text-center text-slate-400 text-xs">
-                          هنوز هیچ پستی ثبت نشده است. همین حالا اولین پست را بنویسید!
-                        </td>
+              {/* Search & Filters Bar */}
+              <div className="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4">
+                {/* Full-Text Search */}
+                <div className="relative md:col-span-6">
+                  <Search className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text"
+                    value={postSearchQuery}
+                    onChange={(e) => setPostSearchQuery(e.target.value)}
+                    placeholder="جستجوی تمام‌متن (عنوان، متون بلوک‌ها، برچسب‌ها، کلیدواژه‌ها)..."
+                    className="w-full pl-10 pr-11 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:border-teal-500"
+                  />
+                  {postSearchQuery && (
+                    <button 
+                      onClick={() => setPostSearchQuery("")}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Author Filter Dropdown */}
+                <div className="md:col-span-3">
+                  <select
+                    value={postAuthorFilter}
+                    onChange={(e) => setPostAuthorFilter(e.target.value)}
+                    className="w-full py-3 px-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500 cursor-pointer"
+                  >
+                    <option value="all">👨‍⚕️ همه نویسندگان</option>
+                    {allAuthors.map(auth => (
+                      <option key={auth.id || auth._id} value={auth.id || auth._id}>
+                        {auth.name} ({auth.postCount || 0} مقاله)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status Filter Dropdown */}
+                <div className="md:col-span-3">
+                  <select
+                    value={postStatusFilter}
+                    onChange={(e) => setPostStatusFilter(e.target.value)}
+                    className="w-full py-3 px-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500 cursor-pointer"
+                  >
+                    <option value="all">📊 همه وضعیت‌ها</option>
+                    <option value="published">✅ منتشر شده</option>
+                    <option value="pending">⏳ در انتظار تایید</option>
+                    <option value="rejected">❌ رد شده</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Table with matching posts */}
+              <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none overflow-hidden">
+                <div className="p-5 bg-slate-50/70 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
+                    تعداد مقالات یافت شده: {filteredPostsList.length} مورد
+                  </span>
+                  {(postSearchQuery || postAuthorFilter !== "all" || postStatusFilter !== "all") && (
+                    <button 
+                      onClick={() => {
+                        setPostSearchQuery("");
+                        setPostAuthorFilter("all");
+                        setPostStatusFilter("all");
+                      }}
+                      className="text-[10px] font-bold text-teal-600 hover:underline flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" /> پاکسازی فیلترها
+                    </button>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-right text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/50 dark:bg-slate-900/30 text-slate-400 text-[10px] uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                        <th className="px-6 py-4 font-extrabold">عنوان مقاله علمی</th>
+                        <th className="px-6 py-4 font-extrabold">نویسنده</th>
+                        <th className="px-6 py-4 font-extrabold">سرفصل درس</th>
+                        <th className="px-6 py-4 font-extrabold text-center">وضعیت انتشار</th>
+                        <th className="px-6 py-4 font-extrabold text-center">تاریخ</th>
+                        <th className="px-6 py-4 font-extrabold text-left">عملیات</th>
                       </tr>
-                    ) : (
-                      allPosts.map(post => (
-                        <tr key={post._id} className="hover:bg-slate-50 dark:bg-slate-900/50 transition-colors">
-                          <td className="px-6 py-3.5 font-bold text-slate-800 dark:text-slate-100">{post.title}</td>
-                          <td className="px-6 py-3.5 text-slate-400 font-semibold">{post.course?.title || "سایر"}</td>
-                          <td className="px-6 py-3.5">
-                            {post.status === "published" ? (
-                              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md font-bold text-[10px]">منتشر شده</span>
-                            ) : post.status === "pending" ? (
-                              <span className="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-md font-bold text-[10px]">در انتظار تایید</span>
-                            ) : (
-                              <div className="space-y-1">
-                                <span className="px-2.5 py-1 bg-rose-50 text-rose-700 rounded-md font-bold text-[10px]">رد شده</span>
-                                {post.rejectionReason && (
-                                  <p className="text-[9px] text-rose-500 max-w-xs">{post.rejectionReason}</p>
-                                )}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-3.5 text-slate-400 font-mono text-[10px]">
-                            {new Date(post.updatedAt || post.createdAt || "").toLocaleDateString("fa-IR")}
-                          </td>
-                          <td className="px-6 py-3.5 text-left shrink-0">
-                            <div className="flex gap-2 justify-end">
-                              <button 
-                                onClick={() => handleStartEditPost(post)}
-                                className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-teal-600 hover:border-teal-100 rounded-lg font-bold text-[10px] cursor-pointer"
-                              >
-                                ویرایش مجدد
-                              </button>
-                              <button 
-                                onClick={() => handleDeletePost(post._id)}
-                                className="px-2.5 py-1 bg-rose-50 dark:bg-rose-900/30 border border-rose-100 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-lg font-bold text-[10px] cursor-pointer transition-all"
-                                title="حذف دائمی مقاله"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                      {filteredPostsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="p-12 text-center text-slate-400 font-bold text-xs italic">
+                            هیچ مقاله‌ای با شرایط جستجوی فعلی یافت نشد.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        filteredPostsList.map(post => {
+                          const authorObj = typeof post.author === "object" ? post.author : null;
+                          const authorName = authorObj?.name || "نویسنده آکادمی";
+                          const authorPic = authorObj?.profilePicture || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200";
+
+                          return (
+                            <tr key={post._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-teal-600 transition-colors line-clamp-1 max-w-sm">
+                                  {post.title}
+                                </div>
+                                {post.summary && (
+                                  <p className="text-[10px] text-slate-400 line-clamp-1 mt-0.5 max-w-sm font-medium">
+                                    {post.summary}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2.5">
+                                  <img src={authorPic} className="w-7 h-7 rounded-lg object-cover border border-slate-200 dark:border-slate-700" alt={authorName} />
+                                  <span className="font-bold text-slate-700 dark:text-slate-200 text-[11px] whitespace-nowrap">{authorName}</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-semibold text-[11px]">
+                                {post.course?.title || "سایر مباحث"}
+                              </td>
+                              <td className="px-6 py-4 text-center">
+                                {post.status === "published" ? (
+                                  <span className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded-lg font-bold text-[10px]">منتشر شده</span>
+                                ) : post.status === "pending" ? (
+                                  <span className="px-3 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg font-bold text-[10px]">در انتظار تایید</span>
+                                ) : (
+                                  <span className="px-3 py-1 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 rounded-lg font-bold text-[10px]">رد شده</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-center text-slate-400 font-mono text-[10px] font-bold">
+                                {new Date(post.updatedAt || post.createdAt || "").toLocaleDateString("fa-IR")}
+                              </td>
+                              <td className="px-6 py-4 text-left shrink-0">
+                                <div className="flex gap-2 justify-end items-center">
+                                  <button 
+                                    onClick={() => handleStartEditPost(post)}
+                                    className="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-teal-600 hover:text-white rounded-xl font-bold text-[10px] transition-all cursor-pointer"
+                                  >
+                                    ویرایش
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeletePost(post._id)}
+                                    className="w-7 h-7 flex items-center justify-center bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white rounded-xl font-bold transition-all cursor-pointer"
+                                    title="حذف مقاله"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           ) : activeTab === "courses" ? (
@@ -3575,6 +3803,134 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 className="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl cursor-pointer"
               >
                 انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RBAC Role & Permissions Modal */}
+      {selectedUserForRoleModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999] animate-fade-in" style={{ direction: "rtl" }}>
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 p-8 max-w-lg w-full space-y-6 shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center shadow-md">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-white leading-tight">
+                    تنظیم نقش و سطح دسترسی کاربر
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-bold">{selectedUserForRoleModal.name} ({selectedUserForRoleModal.email})</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedUserForRoleModal(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Role Radio Select */}
+            <div className="space-y-3">
+              <label className="text-[11px] font-black text-slate-700 dark:text-slate-200">انتخاب نقش کاربری اصلی:</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: "admin", label: "👑 مدیر ارشد", desc: "دسترسی کامل به تمام بخش‌ها" },
+                  { id: "editor", label: "✍️ ویراستار ارشد", desc: "مدیریت و تایید مقالات و نظرات" },
+                  { id: "author", label: "📝 نویسنده علمی", desc: "نگارش و انتشار مقالات خود" },
+                  { id: "student", label: "🎓 دانشجوی آکادمی", desc: "مطالعه دروس، دیدگاه و کوئیزها" }
+                ].map(r => (
+                  <button
+                    type="button"
+                    key={r.id}
+                    onClick={() => {
+                      setTargetRole(r.id as any);
+                      // Default preset permissions
+                      if (r.id === "admin") {
+                        setTargetPermissions(AVAILABLE_PERMISSIONS.map(p => p.key));
+                      } else if (r.id === "editor") {
+                        setTargetPermissions(["posts:create", "posts:publish", "posts:edit_all", "comments:manage", "courses:manage"]);
+                      } else if (r.id === "author") {
+                        setTargetPermissions(["posts:create"]);
+                      } else {
+                        setTargetPermissions([]);
+                      }
+                    }}
+                    className={`p-3.5 rounded-2xl border text-right transition-all cursor-pointer ${targetRole === r.id ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-600 text-indigo-900 dark:text-indigo-200 shadow-sm" : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300"}`}
+                  >
+                    <div className="font-extrabold text-xs">{r.label}</div>
+                    <div className="text-[10px] text-slate-400 mt-1">{r.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Permissions Checkboxes */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-black text-slate-700 dark:text-slate-200">مجوزها و دسترسی‌های تفصیلی (Granular Permissions):</label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (targetPermissions.length === AVAILABLE_PERMISSIONS.length) {
+                      setTargetPermissions([]);
+                    } else {
+                      setTargetPermissions(AVAILABLE_PERMISSIONS.map(p => p.key));
+                    }
+                  }}
+                  className="text-[10px] font-extrabold text-indigo-600 hover:underline"
+                >
+                  {targetPermissions.length === AVAILABLE_PERMISSIONS.length ? "لغو همه" : "انتخاب همه"}
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {AVAILABLE_PERMISSIONS.map(perm => {
+                  const isChecked = targetPermissions.includes(perm.key);
+                  return (
+                    <label 
+                      key={perm.key}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700 cursor-pointer hover:bg-slate-100/60 transition-colors"
+                    >
+                      <input 
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setTargetPermissions(prev => [...prev, perm.key]);
+                          } else {
+                            setTargetPermissions(prev => prev.filter(k => k !== perm.key));
+                          }
+                        }}
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-200 flex-1">{perm.label}</span>
+                      <span className="text-[9px] font-extrabold text-slate-400 bg-slate-200/70 dark:bg-slate-800 px-2 py-0.5 rounded-md">{perm.group}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setSelectedUserForRoleModal(null)}
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl text-xs font-bold hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                disabled={savingUserRole}
+                onClick={handleSaveUserRole}
+                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black transition-colors cursor-pointer shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+              >
+                {savingUserRole ? "در حال ذخیره..." : "ذخیره دسترسی و نقش"}
               </button>
             </div>
           </div>

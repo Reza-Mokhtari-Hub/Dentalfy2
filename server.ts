@@ -1019,13 +1019,150 @@ export async function startServer() {
     return res.json({ success: true, message: successMessage });
   });
 
-  // Users Management API (Admin only)
+  // --- FULL-TEXT SEARCH & PERSIAN NORMALIZATION HELPERS ---
+  function normalizePersianText(str: string): string {
+    if (!str) return "";
+    return str
+      .toLowerCase()
+      .replace(/[ً-ٟ]/g, "") // remove arabic diacritics
+      .replace(/ي/g, "ی")
+      .replace(/ك/g, "ک")
+      .replace(/ة/g, "ه")
+      .replace(/[​-‍﻿]/g, " ") // replace zero-width spaces
+      .trim();
+  }
+
+  function extractBlockText(block: any): string {
+    if (!block || !block.value) return "";
+    const v = block.value;
+    if (typeof v === "string") return v;
+    if (typeof v === "object") {
+      const parts: string[] = [];
+      if (v.text) parts.push(String(v.text));
+      if (v.caption) parts.push(String(v.caption));
+      if (v.author) parts.push(String(v.author));
+      if (v.title) parts.push(String(v.title));
+      if (v.description) parts.push(String(v.description));
+      if (Array.isArray(v.items)) {
+        parts.push(v.items.map((i: any) => (typeof i === "string" ? i : JSON.stringify(i))).join(" "));
+      }
+      if (Array.isArray(v)) {
+        parts.push(v.map((i: any) => (typeof i === "string" ? i : JSON.stringify(i))).join(" "));
+      }
+      return parts.join(" ");
+    }
+    return String(v);
+  }
+
+  function extractPostFullText(post: any): string {
+    const parts: string[] = [];
+    if (post.title) parts.push(post.title);
+    if (post.summary) parts.push(post.summary);
+    if (post.seoTitle) parts.push(post.seoTitle);
+    if (post.seoDescription) parts.push(post.seoDescription);
+    if (Array.isArray(post.tags)) parts.push(post.tags.join(" "));
+    if (Array.isArray(post.seoKeywords)) parts.push(post.seoKeywords.join(" "));
+    if (Array.isArray(post.content)) {
+      for (const block of post.content) {
+        parts.push(extractBlockText(block));
+      }
+    }
+    return parts.join(" ");
+  }
+
+  // --- AUTHORS API (List all faculty and authors) ---
+  app.get("/api/authors", async (req, res) => {
+    try {
+      let authorsList: any[] = [];
+      if (isDBConnected) {
+        const authorUsers = await User.find({ 
+          role: { $in: ["author", "editor", "admin"] } 
+        }).select("_id name email profilePicture role permissions").lean();
+
+        for (const author of authorUsers) {
+          const count = await Post.countDocuments({ 
+            author: author._id, 
+            status: "published" 
+          });
+          authorsList.push({
+            _id: author._id.toString(),
+            id: author._id.toString(),
+            name: author.name,
+            email: author.email,
+            role: author.role,
+            permissions: (author as any).permissions || [],
+            profilePicture: author.profilePicture || "",
+            postCount: count
+          });
+        }
+      } else {
+        const authorUsers = memoryDB.users.filter(u => 
+          u.role === "author" || u.role === "editor" || u.role === "admin"
+        );
+        authorsList = authorUsers.map(author => {
+          const id = author._id || author.id;
+          const count = memoryDB.posts.filter(p => 
+            (p.author._id || p.author) === id && p.status === "published"
+          ).length;
+          return {
+            _id: id,
+            id: id,
+            name: author.name,
+            email: author.email,
+            role: author.role,
+            permissions: (author as any).permissions || [],
+            profilePicture: author.profilePicture || "",
+            postCount: count
+          };
+        });
+      }
+
+      res.json(authorsList);
+    } catch (err: any) {
+      console.error("Error fetching authors:", err);
+      res.status(500).json({ error: "خطا در دریافت لیست نویسندگان و اساتید" });
+    }
+  });
+
+  // Users Management API (Admin only - RBAC)
   app.get("/api/users", async (req, res) => {
-    let users = [];
+    const { search, role, status } = req.query;
+    let users: any[] = [];
     if (isDBConnected) {
-      users = await User.find().sort({ createdAt: -1 });
+      let query: any = {};
+      if (role && role !== "all") {
+        query.role = role;
+      }
+      if (status === "suspended") {
+        query.isSuspended = true;
+      } else if (status === "active") {
+        query.isSuspended = false;
+      }
+      if (search && typeof search === "string" && search.trim()) {
+        const s = search.trim();
+        query.$or = [
+          { name: { $regex: s, $options: "i" } },
+          { email: { $regex: s, $options: "i" } }
+        ];
+      }
+      users = await User.find(query).sort({ createdAt: -1 });
     } else {
       users = memoryDB.users;
+      if (role && role !== "all") {
+        users = users.filter(u => u.role === role);
+      }
+      if (status === "suspended") {
+        users = users.filter(u => u.isSuspended);
+      } else if (status === "active") {
+        users = users.filter(u => !u.isSuspended);
+      }
+      if (search && typeof search === "string" && search.trim()) {
+        const s = normalizePersianText(search.trim());
+        users = users.filter(u => 
+          normalizePersianText(u.name).includes(s) || 
+          normalizePersianText(u.email).includes(s)
+        );
+      }
     }
     // Return safe data
     const safeUsers = users.map(u => ({
@@ -1034,6 +1171,7 @@ export async function startServer() {
       name: u.name,
       email: u.email,
       role: u.role,
+      permissions: u.permissions || [],
       profilePicture: u.profilePicture || "",
       resetPasswordRequested: u.resetPasswordRequested || false,
       isSuspended: u.isSuspended || false,
@@ -1042,9 +1180,52 @@ export async function startServer() {
     res.json(safeUsers);
   });
 
+  // Direct RESTful route for updating user role and permissions
+  app.put("/api/users/:id/role", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { role, permissions, actorName } = req.body;
+      if (!role || !["admin", "editor", "author", "student"].includes(role)) {
+        return res.status(400).json({ error: "نقش نامعتبر است" });
+      }
+
+      if (isDBConnected) {
+        const user = await User.findById(id);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        
+        user.role = role;
+        if (Array.isArray(permissions)) {
+          user.permissions = permissions;
+        }
+        await user.save();
+
+        if (AuditLog) {
+          await AuditLog.create({
+            actorName: actorName || "مدیر ارشد",
+            action: "تغییر سطح دسترسی و نقش کاربر",
+            target: `${user.name} (${role})`
+          });
+        }
+      } else {
+        const user = memoryDB.users.find(u => u._id === id || u.id === id);
+        if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
+        user.role = role;
+        if (Array.isArray(permissions)) {
+          (user as any).permissions = permissions;
+        }
+      }
+
+      await updateSystemStats();
+      res.json({ success: true, message: "سطح دسترسی کاربر با موفقیت بروزرسانی شد" });
+    } catch (err: any) {
+      console.error("Error updating user role:", err);
+      res.status(500).json({ error: err.message || "خطای سرور" });
+    }
+  });
+
   app.post("/api/users/action", async (req, res) => {
     try {
-      const { userId, action, newPassword, newRole } = req.body;
+      const { userId, action, newPassword, newRole, permissions, actorName } = req.body;
       if (!userId || !action) {
         return res.status(400).json({ error: "اطلاعات ارسالی ناقص است" });
       }
@@ -1076,12 +1257,41 @@ export async function startServer() {
         if (action === "suspend") {
           user.isSuspended = true;
           await user.save();
+          if (AuditLog) {
+            await AuditLog.create({
+              actorName: actorName || "مدیر ارشد",
+              action: "تعلیق حساب کاربری",
+              target: user.name
+            });
+          }
         } else if (action === "unsuspend") {
           user.isSuspended = false;
           await user.save();
+          if (AuditLog) {
+            await AuditLog.create({
+              actorName: actorName || "مدیر ارشد",
+              action: "فعال‌سازی مجدد حساب کاربری",
+              target: user.name
+            });
+          }
         } else if (action === "changeRole") {
-          if (newRole === "admin" || newRole === "author" || newRole === "student") {
+          if (["admin", "editor", "author", "student"].includes(newRole)) {
             user.role = newRole;
+            if (Array.isArray(permissions)) {
+              user.permissions = permissions;
+            }
+            await user.save();
+            if (AuditLog) {
+              await AuditLog.create({
+                actorName: actorName || "مدیر ارشد",
+                action: "تغییر سطح دسترسی کاربر",
+                target: `${user.name} (${newRole})`
+              });
+            }
+          }
+        } else if (action === "updatePermissions") {
+          if (Array.isArray(permissions)) {
+            user.permissions = permissions;
             await user.save();
           }
         } else if (action === "changePassword") {
@@ -1091,8 +1301,23 @@ export async function startServer() {
           user.password = newPassword.trim();
           user.temporaryPassword = ""; // Clear temporary password if reset
           await user.save();
+          if (AuditLog) {
+            await AuditLog.create({
+              actorName: actorName || "مدیر ارشد",
+              action: "بازنشانی کلمه عبور کاربر",
+              target: user.name
+            });
+          }
         } else if (action === "delete") {
+          const userName = user.name;
           await User.deleteOne({ _id: user._id });
+          if (AuditLog) {
+            await AuditLog.create({
+              actorName: actorName || "مدیر ارشد",
+              action: "حذف حساب کاربری",
+              target: userName
+            });
+          }
         }
       } else {
         const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
@@ -1103,8 +1328,15 @@ export async function startServer() {
         } else if (action === "unsuspend") {
           user.isSuspended = false;
         } else if (action === "changeRole") {
-          if (newRole === "admin" || newRole === "author" || newRole === "student") {
+          if (["admin", "editor", "author", "student"].includes(newRole)) {
             user.role = newRole;
+            if (Array.isArray(permissions)) {
+              (user as any).permissions = permissions;
+            }
+          }
+        } else if (action === "updatePermissions") {
+          if (Array.isArray(permissions)) {
+            (user as any).permissions = permissions;
           }
         } else if (action === "changePassword") {
           if (!newPassword || newPassword.trim().length < 4) {
@@ -1158,59 +1390,105 @@ export async function startServer() {
     res.json({ success: true, message: "درس با موفقیت اضافه شد" });
   });
 
-  // Posts API: List posts
+  // Posts API: List posts with FULL-TEXT search and Author filtering
   app.get("/api/posts", async (req, res) => {
-    const { role, authorId, courseId } = req.query;
+    try {
+      const { role, authorId, author, courseId, search, q, status } = req.query;
+      const querySearch = (typeof search === "string" ? search : typeof q === "string" ? q : "").trim();
+      const targetAuthorId = (authorId || author || "").toString();
 
-    let posts: any[] = [];
-    if (isDBConnected) {
-      let query: any = {};
-      if (role !== "admin") {
-        // Public sees only published
-        query.status = "published";
-      }
-      if (authorId) {
-        query.author = authorId;
-        // If author requests their own, show all statuses (pending, published, rejected)
-        delete query.status; 
-      }
-      if (courseId && courseId !== "undefined" && courseId !== "null" && courseId !== "") {
-        if (typeof courseId === "string" && courseId.match(/^[0-9a-fA-F]{24}$/)) {
-          query.course = courseId;
-        } else {
-          query.course = null; // Quietly prevent CastError for invalid ObjectIds
+      let posts: any[] = [];
+      if (isDBConnected) {
+        let query: any = {};
+        if (role !== "admin" && role !== "editor") {
+          // Public & Students see only published
+          query.status = "published";
+        } else if (status && status !== "all") {
+          query.status = status;
+        }
+
+        if (targetAuthorId && targetAuthorId !== "all") {
+          if (targetAuthorId.match(/^[0-9a-fA-F]{24}$/)) {
+            query.author = targetAuthorId;
+          }
+          if (role === "author" || role === "editor") {
+            delete query.status; 
+          }
+        }
+        
+        if (courseId && courseId !== "undefined" && courseId !== "null" && courseId !== "" && courseId !== "all") {
+          if (typeof courseId === "string" && courseId.match(/^[0-9a-fA-F]{24}$/)) {
+            query.course = courseId;
+          } else {
+            query.course = null;
+          }
+        }
+
+        posts = await Post.find(query)
+          .populate("author", "name email profilePicture role permissions")
+          .populate("course", "title description syllabus")
+          .sort({ createdAt: -1 });
+      } else {
+        posts = memoryDB.posts.map(post => {
+          const authorObj = memoryDB.users.find(u => 
+            u._id === (post.author._id || post.author) || 
+            u.id === (post.author._id || post.author)
+          );
+          const courseObj = memoryDB.courses.find(c => c._id === post.course);
+          return {
+            ...post,
+            author: authorObj ? { 
+              name: authorObj.name, 
+              email: authorObj.email, 
+              profilePicture: authorObj.profilePicture, 
+              _id: authorObj._id || authorObj.id,
+              id: authorObj._id || authorObj.id,
+              role: authorObj.role,
+              permissions: (authorObj as any).permissions || []
+            } : post.author,
+            course: courseObj ? { title: courseObj.title, _id: courseObj._id } : null
+          };
+        });
+
+        // Filtering in memory
+        if (role !== "admin" && role !== "editor" && (!targetAuthorId || targetAuthorId === "all")) {
+          posts = posts.filter(p => p.status === "published");
+        } else if (status && status !== "all") {
+          posts = posts.filter(p => p.status === status);
+        }
+
+        if (targetAuthorId && targetAuthorId !== "all") {
+          posts = posts.filter(p => {
+            const aId = p.author?._id || p.author?.id || p.author;
+            return aId === targetAuthorId;
+          });
+        }
+        if (courseId && courseId !== "all") {
+          posts = posts.filter(p => {
+            const cId = p.course?._id || p.course;
+            return cId === courseId;
+          });
         }
       }
 
-      posts = await Post.find(query)
-        .populate("author", "name email profilePicture")
-        .populate("course", "title")
-        .sort({ createdAt: -1 });
-    } else {
-      posts = memoryDB.posts.map(post => {
-        // populate authors and courses in memory
-        const authorObj = memoryDB.users.find(u => u._id === (post.author._id || post.author));
-        const courseObj = memoryDB.courses.find(c => c._id === post.course);
-        return {
-          ...post,
-          author: authorObj ? { name: authorObj.name, email: authorObj.email, profilePicture: authorObj.profilePicture, _id: authorObj._id } : post.author,
-          course: courseObj ? { title: courseObj.title, _id: courseObj._id } : null
-        };
-      });
+      // --- FULL-TEXT ARTICLE SEARCH ENGINE ---
+      // Scans across title, summary, seoTitle, seoDescription, tags, seoKeywords,
+      // and ALL deep content block values (headings, paragraphs, lists, quotes, image captions, videos)
+      if (querySearch) {
+        const normalizedQuery = normalizePersianText(querySearch);
+        const queryTerms = normalizedQuery.split(/s+/).filter(Boolean);
 
-      // Filtering in memory
-      if (role !== "admin" && !authorId) {
-        posts = posts.filter(p => p.status === "published");
+        posts = posts.filter(post => {
+          const fullText = normalizePersianText(extractPostFullText(post));
+          return queryTerms.every(term => fullText.includes(term));
+        });
       }
-      if (authorId) {
-        posts = posts.filter(p => (p.author._id || p.author) === authorId);
-      }
-      if (courseId) {
-        posts = posts.filter(p => p.course?._id === courseId);
-      }
+
+      res.json(posts);
+    } catch (err: any) {
+      console.error("Error in /api/posts:", err);
+      res.status(500).json({ error: "خطا در پردازش لیست مقالات" });
     }
-
-    res.json(posts);
   });
 
   // Single Post Details

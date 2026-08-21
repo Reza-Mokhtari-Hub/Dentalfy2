@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { 
   BookOpen, FileText, CheckCircle, Download, Award, Search, 
   MessageSquare, HelpCircle, Clock, ArrowRight, User, Bookmark, 
-  ListTodo, Activity, Sparkles, Star, Send, Bell, LogOut, LucideIcon, Shield, Menu, X, Trash2, Lock
+  ListTodo, Activity, Sparkles, Star, Send, Bell, LogOut, LucideIcon, Shield, Menu, X, Trash2, Lock,
+  CornerDownLeft
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { IUser, ICourse, IPost, ISiteSettings, IReview, IQna, IQuiz, INotification, ILibraryDoc } from "../types";
+import { IUser, ICourse, IPost, ISiteSettings, IReview, IQna, IQuiz, INotification, ILibraryDoc, IComment } from "../types";
 
 interface StudentPanelProps {
   currentUser: IUser;
@@ -45,6 +46,11 @@ export function StudentPanel({ currentUser, settings, courses, posts, onLogout, 
   const [newQnaQuestion, setNewQnaQuestion] = useState<string>("");
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
   const [submittingQna, setSubmittingQna] = useState<boolean>(false);
+
+  // Post Comment / Discussion States
+  const [postComments, setPostComments] = useState<IComment[]>([]);
+  const [postCommentText, setPostCommentText] = useState<string>("");
+  const [submittingPostComment, setSubmittingPostComment] = useState<boolean>(false);
 
   // Quiz States
   const [activeQuiz, setActiveQuiz] = useState<IQuiz | null>(null);

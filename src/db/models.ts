@@ -5,7 +5,8 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password?: string;
-  role: "admin" | "author" | "student";
+  role: "admin" | "editor" | "author" | "student";
+  permissions?: string[];
   gender?: "male" | "female" | "other" | "";
   profilePicture: string;
   resetPasswordRequested: boolean;
@@ -31,7 +32,8 @@ const UserSchema = new Schema<IUser>({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ["admin", "author", "student"], default: "student" },
+  role: { type: String, enum: ["admin", "editor", "author", "student"], default: "student" },
+  permissions: { type: [String], default: [] },
   gender: { type: String, enum: ["male", "female", "other", ""], default: "" },
   profilePicture: { type: String, default: "" },
   resetPasswordRequested: { type: Boolean, default: false },

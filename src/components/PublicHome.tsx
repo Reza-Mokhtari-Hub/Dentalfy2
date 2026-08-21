@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { 
   BookOpen, FileText, CheckCircle, Download, UserPlus, 
   ChevronRight, Clock, ArrowUpRight, HelpCircle, Shield, ArrowRight, User,
-  Menu, X, Award, Users, Star, GraduationCap, ArrowLeft
+  Menu, X, Award, Users, Star, GraduationCap, ArrowLeft, Search, Filter, Sparkles
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ICourse, IPost, ISiteSettings, ILibraryDoc, IFAQ } from "../types";
@@ -20,6 +20,9 @@ interface PublicHomeProps {
 
 export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel, onRegisterAuthor, onStudentLogin, onStudentRegister }: PublicHomeProps) {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [authorsList, setAuthorsList] = useState<any[]>([]);
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<ICourse | null>(null);
   const [libraryDocs, setLibraryDocs] = useState<ILibraryDoc[]>([]);
   const [faqs, setFaqs] = useState<IFAQ[]>([]);
@@ -39,14 +42,61 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
         if (Array.isArray(data)) setFaqs(data);
       })
       .catch(err => console.error(err));
+
+    fetch("/api/authors")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setAuthorsList(data);
+      })
+      .catch(err => console.error(err));
   }, []);
 
-  const filteredPosts = selectedCourseId
-    ? posts.filter((p) => {
-        const cId = typeof p.course === "object" ? p.course?._id : p.course;
-        return cId === selectedCourseId;
-      })
-    : posts;
+  // Helper for full-text block extraction
+  const getPostFullText = (p: IPost): string => {
+    const parts: string[] = [];
+    if (p.title) parts.push(p.title);
+    if (p.summary) parts.push(p.summary);
+    if (p.seoTitle) parts.push(p.seoTitle);
+    if (p.seoDescription) parts.push(p.seoDescription);
+    if (Array.isArray(p.tags)) parts.push(p.tags.join(" "));
+    if (Array.isArray(p.content)) {
+      p.content.forEach((b: any) => {
+        if (!b || !b.value) return;
+        if (typeof b.value === 'string') parts.push(b.value);
+        else if (typeof b.value === 'object') {
+          if (b.value.text) parts.push(String(b.value.text));
+          if (b.value.caption) parts.push(String(b.value.caption));
+          if (b.value.author) parts.push(String(b.value.author));
+          if (Array.isArray(b.value.items)) parts.push(b.value.items.join(" "));
+        }
+      });
+    }
+    return parts.join(" ").toLowerCase();
+  };
+
+  const filteredPosts = posts.filter((p) => {
+    // 1. Course Filter
+    if (selectedCourseId) {
+      const cId = typeof p.course === "object" ? p.course?._id : p.course;
+      if (cId !== selectedCourseId) return false;
+    }
+
+    // 2. Author Filter
+    if (selectedAuthorId && selectedAuthorId !== "all") {
+      const aId = typeof p.author === "object" ? (p.author?._id || (p.author as any)?.id) : p.author;
+      if (aId !== selectedAuthorId) return false;
+    }
+
+    // 3. Full-Text Search
+    if (searchQuery.trim()) {
+      const queryTerms = searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+      const postText = getPostFullText(p);
+      const matchesAll = queryTerms.every(term => postText.includes(term));
+      if (!matchesAll) return false;
+    }
+
+    return true;
+  });
 
   // Single Course View
   if (selectedCourseDetail) {
@@ -484,22 +534,88 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
 
       {/* Latest Posts */}
       <section id="posts" className="py-24 sm:py-32 bg-slate-50 dark:bg-slate-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-8">
             <div className="max-w-2xl space-y-4">
-              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">آخرین مقالات بالینی</h2>
+              <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tighter">جستجو و آرشیو مقالات بالینی</h2>
               <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">
-                تازه‌ترین تجربیات، گزارش کیس‌ها و مقالات آموزشی منتشر شده توسط اعضای هیئت علمی دنتالفای.
+                جستجوی تمام‌متن در محتوای دروس تخصصی، گزارش کیس‌ها و مقالات آموزشی منتشر شده توسط اساتید و هیئت علمی.
               </p>
             </div>
-            {selectedCourseId && (
-              <button 
-                onClick={() => setSelectedCourseId(null)}
-                className="self-start sm:self-auto px-6 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-black text-slate-600 dark:text-slate-300 hover:text-teal-600 hover:border-teal-500 flex items-center gap-2.5 shadow-xs transition-all cursor-pointer active:scale-95"
+            <div className="flex items-center gap-3">
+              <span className="px-4 py-2 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded-2xl text-xs font-black">
+                {filteredPosts.length} مقاله یافت شد
+              </span>
+              {(selectedCourseId || selectedAuthorId !== "all" || searchQuery.trim()) && (
+                <button 
+                  onClick={() => {
+                    setSelectedCourseId(null);
+                    setSelectedAuthorId("all");
+                    setSearchQuery("");
+                  }}
+                  className="px-4 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-800 rounded-2xl text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-rose-100 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" /> پاکسازی فیلترها
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Search & Filtering Control Bar */}
+          <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-700 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-4">
+            {/* Full-Text Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input 
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="جستجوی تمام‌متن (عنوان، اصطلاحات بالینی، متون مقالات، کلمات کلیدی)..."
+                className="w-full pl-10 pr-12 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-medium focus:outline-none focus:border-teal-500 transition-all text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {/* Author Filter Dropdown */}
+            <div className="flex items-center gap-2 min-w-[220px]">
+              <User className="w-4 h-4 text-slate-400 shrink-0" />
+              <select
+                value={selectedAuthorId}
+                onChange={(e) => setSelectedAuthorId(e.target.value)}
+                className="w-full py-3.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500 transition-all cursor-pointer"
               >
-                لغو فیلتر درس <X className="w-4 h-4" />
-              </button>
-            )}
+                <option value="all">👨‍⚕️ همه نویسندگان و اساتید</option>
+                {authorsList.map((author) => (
+                  <option key={author.id || author._id} value={author.id || author._id}>
+                    {author.name} ({author.postCount || 0} مقاله)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Course Filter Dropdown */}
+            <div className="flex items-center gap-2 min-w-[220px]">
+              <BookOpen className="w-4 h-4 text-slate-400 shrink-0" />
+              <select
+                value={selectedCourseId || "all"}
+                onChange={(e) => setSelectedCourseId(e.target.value === "all" ? null : e.target.value)}
+                className="w-full py-3.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-teal-500 transition-all cursor-pointer"
+              >
+                <option value="all">📚 همه مباحث و دروس</option>
+                {courses.map((course) => (
+                  <option key={course._id} value={course._id}>
+                    {course.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {filteredPosts.length === 0 ? (

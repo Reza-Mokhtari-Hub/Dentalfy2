@@ -3,7 +3,8 @@ export interface IUser {
   _id?: string;
   name: string;
   email: string;
-  role: "admin" | "author" | "student";
+  role: "admin" | "editor" | "author" | "student";
+  permissions?: string[];
   gender?: "male" | "female" | "other" | "";
   profilePicture: string;
   resetPasswordRequested: boolean;
