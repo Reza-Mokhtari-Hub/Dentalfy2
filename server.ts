@@ -10,6 +10,35 @@ import {
 } from "./src/db/models";
 
 const Notification = DBNotification;
+
+const CANDIDATE_GEMINI_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-pro",
+  "gemini-3.6-flash",
+  "gemini-1.5-flash"
+];
+
+async function generateWithFallbackModel(ai: any, generateParams: any) {
+  let lastErr: any = null;
+  for (const modelCandidate of CANDIDATE_GEMINI_MODELS) {
+    try {
+      console.log(`🤖 Attempting Gemini content generation with model: ${modelCandidate}`);
+      const result = await ai.models.generateContent({
+        ...generateParams,
+        model: modelCandidate
+      });
+      if (result) {
+        console.log(`✅ Generation successful with model: ${modelCandidate}`);
+        return result;
+      }
+    } catch (err: any) {
+      console.warn(`⚠️ Gemini model '${modelCandidate}' failed: ${err?.message || err}. Trying next fallback model...`);
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error("هیچ‌کدام از مدل‌های هوش مصنوعی پاسخگو نبودند.");
+}
+
 export async function startServer() {
   console.log("🛠️ Initializing server...");
   console.log("📝 MONGODB_URI exists:", !!process.env.MONGODB_URI);
@@ -80,13 +109,20 @@ export async function startServer() {
 
   // Seed default categories
   const defaultCategories = [
-    { _id: "cat-1", name: "جراحی", parent: null, slug: "surgery", createdAt: new Date() },
-    { _id: "cat-2", name: "ایمپلنت", parent: "جراحی", slug: "implant", createdAt: new Date() },
-    { _id: "cat-3", name: "سینوس لیفت", parent: "ایمپلنت", slug: "sinus-lift", createdAt: new Date() },
-    { _id: "cat-4", name: "اندودنتیکس", parent: null, slug: "endodontics", createdAt: new Date() },
-    { _id: "cat-5", name: "ترمیمی و زیبایی", parent: null, slug: "restorative-cosmetic", createdAt: new Date() }
+    { name: "ارتودنسی", parent: null, slug: "orthodontics" },
+    { name: "اندودنتیکس", parent: null, slug: "endodontics" },
+    { name: "ترمیمی و زیبایی", parent: null, slug: "restorative-cosmetic" },
+    { name: "جراحی فک و صورت", parent: null, slug: "maxillofacial-surgery" },
+    { name: "ایمپلنتولوژی", parent: "جراحی فک و صورت", slug: "implantology" },
+    { name: "پریودنتیکس", parent: null, slug: "periodontics" },
+    { name: "دندانپزشکی کودکان", parent: null, slug: "pediatric-dentistry" },
+    { name: "بیماری‌های دهان و فک", parent: null, slug: "oral-medicine" }
   ];
-  memoryDB.categories.push(...defaultCategories);
+  memoryDB.categories.push(...defaultCategories.map((c, i) => ({
+    _id: "cat-" + (i + 1),
+    ...c,
+    createdAt: new Date()
+  })));
 
   // Seed default quizzes for courses
   const defaultQuizzes = [
@@ -499,6 +535,15 @@ export async function startServer() {
         if (!faqExists) {
           await FAQ.create({ question: f.question, answer: f.answer });
           console.log(`🌱 Seeded Default FAQ: "${f.question}"`);
+        }
+      }
+
+      // Seed default categories in MongoDB if none exist
+      for (const cat of defaultCategories) {
+        const catExists = await Category.findOne({ slug: cat.slug });
+        if (!catExists) {
+          await Category.create(cat);
+          console.log(`🌱 Seeded Default Category: "${cat.name}" (${cat.slug})`);
         }
       }
 
@@ -1526,11 +1571,29 @@ export async function startServer() {
       return res.status(400).json({ error: "عنوان و شناسه نویسنده الزامی هستند" });
     }
 
+    const trimmedTitle = title.trim();
     const postStatus = status || "pending";
 
     if (isDBConnected) {
+      // Prevent duplicate creation if a post with exact same title and author was created in last 10s
+      const tenSecondsAgo = new Date(Date.now() - 10000);
+      const recentDup = await Post.findOne({
+        title: trimmedTitle,
+        author: authorId,
+        createdAt: { $gte: tenSecondsAgo }
+      });
+
+      if (recentDup) {
+        console.warn(`⚠️ Blocked duplicate post creation for "${trimmedTitle}"`);
+        return res.json({
+          success: true,
+          message: "این مقاله قبلاً ثبت شده است.",
+          post: recentDup
+        });
+      }
+
       await Post.create({
-        title,
+        title: trimmedTitle,
         content: content || [],
         author: authorId,
         course: courseId || null,
@@ -1541,9 +1604,25 @@ export async function startServer() {
         rejectionReason: ""
       });
     } else {
+      const tenSecondsAgo = Date.now() - 10000;
+      const recentDup = memoryDB.posts.find(p => 
+        p.title === trimmedTitle &&
+        (p.author === authorId || p.author?._id === authorId || p.author?.id === authorId) &&
+        new Date(p.createdAt).getTime() >= tenSecondsAgo
+      );
+
+      if (recentDup) {
+        console.warn(`⚠️ Blocked duplicate post creation in memoryDB for "${trimmedTitle}"`);
+        return res.json({
+          success: true,
+          message: "این مقاله قبلاً ثبت شده است.",
+          post: recentDup
+        });
+      }
+
       memoryDB.posts.push({
         _id: "mem-post-" + Date.now(),
-        title,
+        title: trimmedTitle,
         content: content || [],
         author: authorId,
         course: courseId || null,
@@ -1798,8 +1877,7 @@ export async function startServer() {
 3. 'quote': برای کلمات قصار، توصیه‌ها یا هشدارهای مهم یک دندانپزشک برجسته.
 4. 'list': برای دسته‌بندی مراحل درمان، تداخل‌های دارویی، تجهیزات یا راهنماهای سریع.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+      const response = await generateWithFallbackModel(ai, {
         contents: prompt,
         config: {
           systemInstruction: "شما مقالات علمی دندانپزشکی با دقت ۱۰۰٪ بالینی و اصطلاحات پزشکی و دندانپزشکی معتبر به زبان فارسی تولید می‌کنید.",
@@ -2935,8 +3013,7 @@ export async function startServer() {
 ]
 لطفاً مطمئن شوید ساختار کاملا معتبر است و از آوردن مارک‌داون یا کلمات اضافی خودداری کنید.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+      const response = await generateWithFallbackModel(ai, {
         contents: prompt
       });
 
@@ -2987,9 +3064,22 @@ export async function startServer() {
   app.get("/api/categories", async (req, res) => {
     try {
       if (isDBConnected) {
-        const categories = await Category.find().sort({ createdAt: 1 });
+        let categories = await Category.find().sort({ createdAt: 1 });
+        if (categories.length === 0) {
+          for (const cat of defaultCategories) {
+            await Category.create(cat);
+          }
+          categories = await Category.find().sort({ createdAt: 1 });
+        }
         res.json(categories);
       } else {
+        if (memoryDB.categories.length === 0) {
+          memoryDB.categories.push(...defaultCategories.map((c, i) => ({
+            _id: "cat-" + (i + 1),
+            ...c,
+            createdAt: new Date()
+          })));
+        }
         res.json(memoryDB.categories);
       }
     } catch (err: any) {
@@ -3016,6 +3106,76 @@ export async function startServer() {
         };
         memoryDB.categories.push(cat);
         res.json({ success: true, category: cat });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put("/api/categories/:id", async (req, res) => {
+    const { id } = req.params;
+    const { name, parent, slug } = req.body;
+    if (!name || !slug) {
+      return res.status(400).json({ error: "نام دسته‌بندی و اسلاگ الزامی هستند" });
+    }
+    try {
+      if (isDBConnected) {
+        const cat = await Category.findByIdAndUpdate(
+          id,
+          { $set: { name, parent: parent || null, slug } },
+          { new: true }
+        );
+        res.json({ success: true, category: cat });
+      } else {
+        const cat = memoryDB.categories.find(c => c._id === id);
+        if (cat) {
+          cat.name = name;
+          cat.parent = parent || null;
+          cat.slug = slug;
+          res.json({ success: true, category: cat });
+        } else {
+          res.status(404).json({ error: "دسته‌بندی یافت نشد" });
+        }
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/categories/seed-defaults", async (req, res) => {
+    try {
+      const defaultCats = [
+        { name: "ارتودنسی", parent: null, slug: "orthodontics" },
+        { name: "اندودنتیکس", parent: null, slug: "endodontics" },
+        { name: "ترمیمی و زیبایی", parent: null, slug: "restorative-cosmetic" },
+        { name: "جراحی فک و صورت", parent: null, slug: "maxillofacial-surgery" },
+        { name: "ایمپلنتولوژی", parent: "جراحی فک و صورت", slug: "implantology" },
+        { name: "پریودنتیکس", parent: null, slug: "periodontics" },
+        { name: "دندانپزشکی کودکان", parent: null, slug: "pediatric-dentistry" },
+        { name: "بیماری‌های دهان و فک", parent: null, slug: "oral-medicine" }
+      ];
+
+      if (isDBConnected) {
+        for (const cat of defaultCats) {
+          const exists = await Category.findOne({ slug: cat.slug });
+          if (!exists) {
+            await Category.create(cat);
+          }
+        }
+        const updatedList = await Category.find().sort({ createdAt: 1 });
+        res.json({ success: true, categories: updatedList });
+      } else {
+        for (const cat of defaultCats) {
+          const exists = memoryDB.categories.some(c => c.slug === cat.slug);
+          if (!exists) {
+            memoryDB.categories.push({
+              _id: "cat-" + Date.now() + Math.random().toString(36).substring(2, 6),
+              ...cat,
+              createdAt: new Date()
+            });
+          }
+        }
+        res.json({ success: true, categories: memoryDB.categories });
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -3104,6 +3264,79 @@ export async function startServer() {
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/notifications/broadcast", async (req, res) => {
+    const { title, content, targetRole, senderName } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ error: "عنوان و متن اعلان الزامی هستند" });
+    }
+    try {
+      if (isDBConnected) {
+        await Notification.create({
+          targetRole: targetRole || null,
+          title,
+          content,
+          isRead: false
+        });
+        await AuditLog.create({
+          actorName: senderName || "مدیر ارشد",
+          action: "ارسال اعلان همگانی",
+          target: `${title} (${targetRole || "همه"})`
+        });
+      } else {
+        memoryDB.notifications.unshift({
+          _id: "not-" + Date.now(),
+          targetRole: targetRole || null,
+          title,
+          content,
+          isRead: false,
+          createdAt: new Date()
+        });
+        memoryDB.auditLogs.unshift({
+          _id: "log-" + Date.now(),
+          actorName: senderName || "مدیر ارشد",
+          action: "ارسال اعلان همگانی",
+          target: `${title} (${targetRole || "همه"})`,
+          createdAt: new Date()
+        });
+      }
+      res.json({ success: true, message: "اعلان همگانی با موفقیت ارسال شد" });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // --- SYSTEM BACKUP & RESTORE ENDPOINTS ---
+  app.get("/api/system/export", async (req, res) => {
+    try {
+      let exportData: any = {};
+      if (isDBConnected) {
+        exportData = {
+          users: await User.find().lean(),
+          courses: await Course.find().lean(),
+          posts: await Post.find().lean(),
+          settings: await SiteSettings.findOne().lean(),
+          requests: await AccountRequest.find().lean(),
+          libraryDocs: await LibraryDoc.find().lean(),
+          comments: await Comment.find().lean(),
+          faqs: await FAQ.find().lean(),
+          categories: await Category.find().lean(),
+          quizzes: await Quiz.find().lean(),
+          exportedAt: new Date()
+        };
+      } else {
+        exportData = {
+          ...memoryDB,
+          exportedAt: new Date()
+        };
+      }
+      res.setHeader("Content-Disposition", `attachment; filename=dentalfy_backup_${Date.now()}.json`);
+      res.setHeader("Content-Type", "application/json");
+      res.send(JSON.stringify(exportData, null, 2));
+    } catch (err: any) {
+      res.status(500).json({ error: "خطا در خروجی‌گرفتن از پایگاه داده" });
     }
   });
 
@@ -3354,8 +3587,7 @@ export async function startServer() {
       
       const prompt = `شما یک دستیار هوش مصنوعی و متخصص آموزش دندانپزشکی در پلتفرم دنتالفای (dentalfy) هستید. به زبان فارسی شیوا، علمی و روان پاسخ دهید. سوال کاربر: ${message}`;
       
-      const response = await ai.models.generateContent({
-        model: "gemini-1.5-flash",
+      const response = await generateWithFallbackModel(ai, {
         contents: prompt
       });
 

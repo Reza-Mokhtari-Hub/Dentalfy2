@@ -44,6 +44,7 @@ export interface IPost {
   _id: string;
   title: string;
   content: IBlock[];
+  category?: string;
   author: {
     _id?: string;
     id?: string;

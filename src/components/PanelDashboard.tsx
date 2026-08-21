@@ -19,7 +19,7 @@ interface PanelDashboardProps {
 
 export function PanelDashboard({ currentUser, settings, courses, posts, onLogout, onRefreshData }: PanelDashboardProps) {
   const isAdmin = currentUser.role === "admin";
-  const [activeTab, setActiveTab] = useState<"dashboard" | "posts" | "courses" | "requests" | "siteSettings" | "profile" | "comments" | "libraryAndFaqs" | "users">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "posts" | "courses" | "categories" | "requests" | "siteSettings" | "profile" | "comments" | "libraryAndFaqs" | "users">("dashboard");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
 
@@ -65,6 +65,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
 
   // Block Editor states
   const [isCreatingPost, setIsCreatingPost] = useState(false);
+  const [isSavingPost, setIsSavingPost] = useState(false);
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [postTitle, setPostTitle] = useState("");
@@ -127,6 +128,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const [newCatName, setNewCatName] = useState("");
   const [newCatSlug, setNewCatSlug] = useState("");
   const [newCatParent, setNewCatParent] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [catSearchQuery, setCatSearchQuery] = useState("");
   const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   // Security Audit Log States
@@ -667,31 +670,107 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   // --- CATEGORY MANAGER HANDLERS ---
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCatName || !newCatSlug) return;
+    if (!newCatName.trim() || !newCatSlug.trim()) return;
     setIsSavingCategory(true);
     try {
-      const res = await fetch("/api/categories", {
-        method: "POST",
+      const isEdit = !!editingCategoryId;
+      const endpoint = isEdit ? `/api/categories/${editingCategoryId}` : "/api/categories";
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: newCatName,
-          slug: newCatSlug,
+          name: newCatName.trim(),
+          slug: newCatSlug.trim().toLowerCase(),
           parent: newCatParent || null
         })
       });
       if (res.ok) {
-        showMessage(`دسته‌بندی تخصصی "${newCatName}" با موفقیت تعریف شد.`);
+        showMessage(isEdit ? `دسته‌بندی "${newCatName}" با موفقیت بروزرسانی شد.` : `دسته‌بندی تخصصی "${newCatName}" با موفقیت تعریف شد.`);
         setNewCatName("");
         setNewCatSlug("");
         setNewCatParent("");
+        setEditingCategoryId(null);
         fetchAdminLists();
       } else {
-        alert("خطا در ثبت دسته‌بندی.");
+        const errData = await res.json();
+        alert(errData.error || "خطا در ثبت دسته‌بندی.");
       }
     } catch (err) {
       console.error(err);
+      alert("خطا در برقراری ارتباط با سرور.");
     } finally {
       setIsSavingCategory(false);
+    }
+  };
+
+  const handleEditCategoryStart = (cat: any) => {
+    setEditingCategoryId(cat._id);
+    setNewCatName(cat.name);
+    setNewCatSlug(cat.slug);
+    setNewCatParent(cat.parent || "");
+  };
+
+  const handleAddSubcategoryStart = (parentCat: any) => {
+    setEditingCategoryId(null);
+    setNewCatName("");
+    setNewCatSlug("");
+    setNewCatParent(parentCat._id || parentCat.name);
+  };
+
+  const handleCancelCategoryEdit = () => {
+    setEditingCategoryId(null);
+    setNewCatName("");
+    setNewCatSlug("");
+    setNewCatParent("");
+  };
+
+  const handleSeedDefaultCategories = async () => {
+    try {
+      const res = await fetch("/api/categories/seed-defaults", { method: "POST" });
+      if (res.ok) {
+        showMessage("دسته‌بندی‌های پایه دندانپزشکی با موفقیت بارگذاری شدند.");
+        fetchAdminLists();
+      } else {
+        alert("خطا در بارگذاری دسته‌بندی‌های پیش‌فرض.");
+      }
+    } catch (err) {
+      alert("خطا در برقراری ارتباط با سرور.");
+    }
+  };
+
+  const handleAutoGenerateSlug = (name: string) => {
+    const map: Record<string, string> = {
+      "ارتودنسی": "orthodontics",
+      "اندودنتیکس": "endodontics",
+      "اندو": "endo",
+      "ترمیمی و زیبایی": "restorative-cosmetic",
+      "ترمیمی": "restorative",
+      "زیبایی": "cosmetic",
+      "جراحی فک و صورت": "maxillofacial-surgery",
+      "جراحی": "surgery",
+      "ایمپلنت": "implant",
+      "ایمپلنتولوژی": "implantology",
+      "پریودنتیکس": "periodontics",
+      "پریو": "perio",
+      "دندانپزشکی کودکان": "pediatric-dentistry",
+      "کودکان": "pediatrics",
+      "بیماری‌های دهان و فک": "oral-medicine",
+      "پروتزهای دندانی": "prosthodontics",
+      "رادیولوژی دهان": "oral-radiology",
+      "پاتولوژی دهان": "oral-pathology"
+    };
+
+    const trimmed = name.trim();
+    if (map[trimmed]) {
+      setNewCatSlug(map[trimmed]);
+    } else {
+      const slug = trimmed
+        .toLowerCase()
+        .replace(/[^a-z0-9\u0600-\u06FF\s-]/g, '')
+        .replace(/\s+/g, '-');
+      setNewCatSlug(slug || "category-" + Date.now().toString().slice(-4));
     }
   };
 
@@ -842,14 +921,17 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
 
   // Submit Post from Editor to DB (with role-based status option)
   const handleSavePostToDB = async (targetStatus: "draft" | "pending" | "published") => {
+    if (isSavingPost) return;
     if (!postTitle.trim()) {
       alert("عنوان پست الزامی است.");
       return;
     }
 
+    setIsSavingPost(true);
+
     const payload = {
       postId: editingPostId,
-      title: postTitle,
+      title: postTitle.trim(),
       content: postBlocks,
       courseId: postCourseId,
       authorId: currentUser.id || currentUser._id,
@@ -876,6 +958,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
       }
     } catch (err) {
       alert("خطا در ذخیره پست.");
+    } finally {
+      setIsSavingPost(false);
     }
   };
 
@@ -1186,6 +1270,15 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 >
                   <BookOpen className={`w-5 h-5 ${activeTab === "courses" ? "text-white" : "group-hover:scale-110 transition-transform"}`} /> 
                   دروس و سرفصل‌ها
+                </button>
+
+                <button 
+                  onClick={() => { setActiveTab("categories"); setIsMobileSidebarOpen(false); setIsCreatingPost(false); }}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-[1.25rem] font-bold text-sm transition-all duration-300 cursor-pointer group ${activeTab === "categories" ? "bg-indigo-600 text-white shadow-xl shadow-indigo-600/20" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-indigo-600"}`}
+                >
+                  <Grid className={`w-5 h-5 ${activeTab === "categories" ? "text-white" : "group-hover:scale-110 transition-transform"}`} /> 
+                  دسته‌بندی‌های علمی
+                  <span className={`mr-auto text-[10px] px-2.5 py-0.5 rounded-full font-bold ${activeTab === "categories" ? "bg-white/20 text-white" : "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400"}`}>{allCategories.length}</span>
                 </button>
 
                 <button 
@@ -1852,24 +1945,33 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   {/* Multi-role action buttons */}
                   <div className="pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
                     <button 
+                      type="button"
+                      disabled={isSavingPost}
                       onClick={() => handleSavePostToDB("draft")}
-                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-extrabold rounded-xl text-xs transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 dark:text-slate-200 font-extrabold rounded-xl text-xs transition-all cursor-pointer border border-slate-200 dark:border-slate-700 flex items-center justify-center gap-2"
                     >
+                      {isSavingPost && <span className="w-3.5 h-3.5 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></span>}
                       ذخیره به عنوان پیش‌نویس
                     </button>
                     
                     {isAdmin ? (
                       <button 
+                        type="button"
+                        disabled={isSavingPost}
                         onClick={() => handleSavePostToDB("published")}
-                        className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-teal-600/10 cursor-pointer"
+                        className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-teal-600/10 cursor-pointer flex items-center justify-center gap-2"
                       >
+                        {isSavingPost && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
                         انتشار مستقیم و فوری مقاله
                       </button>
                     ) : (
                       <button 
+                        type="button"
+                        disabled={isSavingPost}
                         onClick={() => handleSavePostToDB("pending")}
-                        className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-teal-600/10 cursor-pointer"
+                        className="flex-1 py-3 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-teal-600/10 cursor-pointer flex items-center justify-center gap-2"
                       >
+                        {isSavingPost && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>}
                         ارسال جهت بررسی و تایید مدیر علمی
                       </button>
                     )}
@@ -2796,6 +2898,284 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   )}
                 </div>
               )}
+            </div>
+          ) : activeTab === "categories" ? (
+            /* --- SCIENTIFIC CATEGORIES MANAGEMENT --- */
+            <div className="space-y-8 animate-fade-in max-w-6xl">
+              {/* Header Bar */}
+              <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-500/20">
+                    <Grid className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-800 dark:text-white leading-tight">
+                      مدیریت دسته‌بندی‌های علمی
+                    </h3>
+                    <p className="text-xs text-slate-400 font-bold mt-1">
+                      دسته‌بندی موضوعی مقالات، دروس و سرفصل‌های تخصصی دنتالفای
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSeedDefaultCategories}
+                    className="px-5 py-3.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 text-xs font-bold rounded-2xl transition-all cursor-pointer flex items-center gap-2 border border-emerald-200 dark:border-emerald-800/50"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    🌱 درج سریع دسته‌بندی‌های پایه دندانپزشکی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={fetchAdminLists}
+                    className="p-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-2xl hover:bg-slate-100 transition-all cursor-pointer"
+                    title="به‌روزرسانی"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Form and Quick Stats Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Category Registration / Edit Form */}
+                <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none space-y-6">
+                  <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700">
+                    <h4 className="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+                      {editingCategoryId ? "ویرایش دسته‌بندی علمی" : "ثبت دسته‌بندی علمی جدید"}
+                    </h4>
+                    {editingCategoryId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelCategoryEdit}
+                        className="text-xs font-bold text-rose-500 hover:text-rose-600 underline cursor-pointer"
+                      >
+                        انصراف از ویرایش
+                      </button>
+                    )}
+                  </div>
+
+                  <form onSubmit={handleCreateCategory} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1">
+                          نام دسته‌بندی <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={newCatName}
+                          onChange={(e) => {
+                            setNewCatName(e.target.value);
+                            if (!newCatSlug || !editingCategoryId) {
+                              handleAutoGenerateSlug(e.target.value);
+                            }
+                          }}
+                          placeholder="مثال: ارتودنسی"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-teal-500 transition-all"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mr-1">
+                          <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                            نامک (Slug) <span className="text-rose-500">*</span>
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => handleAutoGenerateSlug(newCatName)}
+                            className="text-[10px] font-bold text-teal-600 hover:text-teal-700 cursor-pointer"
+                          >
+                            ⚡ تولید نامک
+                          </button>
+                        </div>
+                        <input
+                          type="text"
+                          value={newCatSlug}
+                          onChange={(e) => setNewCatSlug(e.target.value)}
+                          placeholder="orthodontics"
+                          className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-teal-500 transition-all text-left font-mono"
+                          dir="ltr"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1">
+                        دسته‌بندی مادر (اختیاری)
+                      </label>
+                      <select
+                        value={newCatParent}
+                        onChange={(e) => setNewCatParent(e.target.value)}
+                        className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-teal-500 transition-all cursor-pointer"
+                      >
+                        <option value="">فاقد دسته‌بندی مادر (دسته‌بندی اصلی)</option>
+                        {allCategories
+                          .filter(c => c._id !== editingCategoryId)
+                          .map(cat => (
+                            <option key={cat._id} value={cat._id}>{cat.name} ({cat.slug})</option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSavingCategory}
+                      className="w-full py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-2xl transition-all cursor-pointer shadow-lg shadow-teal-600/20 active:scale-[0.99] disabled:opacity-50"
+                    >
+                      {isSavingCategory ? "در حال ثبت اطلاعات..." : editingCategoryId ? "بروزرسانی دسته‌بندی علمی" : "ثبت دسته‌بندی علمی جدید"}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Stats & Info Card */}
+                <div className="bg-slate-900 text-white rounded-[2.5rem] p-8 space-y-6 flex flex-col justify-between shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                  <div className="space-y-4 relative z-10">
+                    <span className="text-[10px] font-extrabold text-teal-400 uppercase tracking-widest">آمار ساختار علمی</span>
+                    <h4 className="text-lg font-extrabold leading-tight">دسته‌بندی‌های موضوعی دنتالفای</h4>
+                    <p className="text-xs text-slate-300 leading-relaxed font-bold">
+                      با سازماندهی دسته‌بندی‌ها، مقالات تخصصی و دروس آکادمی به تفکیک حوزه‌های تخصصی دندانپزشکی دسته‌بندی می‌شوند.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 relative z-10 pt-4 border-t border-slate-800">
+                    <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/50">
+                      <span className="text-[10px] text-slate-400 font-bold block">کل دسته‌بندی‌ها</span>
+                      <span className="text-2xl font-black text-teal-400 mt-1 block">{allCategories.length}</span>
+                    </div>
+                    <div className="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/50">
+                      <span className="text-[10px] text-slate-400 font-bold block">دسته‌بندی‌های اصلی</span>
+                      <span className="text-2xl font-black text-indigo-400 mt-1 block">{allCategories.filter(c => !c.parent).length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Scientific Categories List */}
+              <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none overflow-hidden space-y-6 p-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-700">
+                  <div>
+                    <h4 className="font-extrabold text-sm text-slate-800 dark:text-white">دسته‌بندی‌های فعال علمی</h4>
+                    <p className="text-[10px] text-slate-400 font-bold mt-0.5">مدیریت، ویرایش و تنظیم زیردسته‌های موضوعی</p>
+                  </div>
+
+                  <div className="relative w-full sm:w-72">
+                    <Search className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={catSearchQuery}
+                      onChange={(e) => setCatSearchQuery(e.target.value)}
+                      placeholder="جستجو در دسته‌بندی‌ها (نام یا اسلاگ)..."
+                      className="w-full pr-11 pl-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                </div>
+
+                {allCategories.length === 0 ? (
+                  <div className="py-16 text-center space-y-4">
+                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+                      <Grid className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-extrabold text-slate-700 dark:text-slate-200">هیچ دسته‌بندی ثبت نشده است.</h5>
+                      <p className="text-xs text-slate-400 font-bold mt-1">با فرم بالا یا دکمه درج سریع زیر، دسته‌بندی‌های علمی دندانپزشکی را اضافه کنید.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSeedDefaultCategories}
+                      className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-2xl transition-all cursor-pointer shadow-lg shadow-teal-600/20 inline-flex items-center gap-2"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      درج سریع دسته‌بندی‌های پایه دندانپزشکی
+                    </button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-right text-xs">
+                      <thead>
+                        <tr className="bg-slate-50/80 dark:bg-slate-900/50 text-slate-400 text-[10px] uppercase tracking-wider">
+                          <th className="px-6 py-4 font-extrabold rounded-r-2xl">نام دسته‌بندی علمی</th>
+                          <th className="px-6 py-4 font-extrabold">نامک (Slug)</th>
+                          <th className="px-6 py-4 font-extrabold">وضعیت ساختار</th>
+                          <th className="px-6 py-4 font-extrabold">تعداد مقالات</th>
+                          <th className="px-6 py-4 font-extrabold text-left rounded-l-2xl">عملیات مدیریت</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                        {allCategories
+                          .filter(c => 
+                            c.name.toLowerCase().includes(catSearchQuery.toLowerCase()) || 
+                            c.slug.toLowerCase().includes(catSearchQuery.toLowerCase())
+                          )
+                          .map(cat => {
+                            const parentCat = allCategories.find(p => p._id === cat.parent || p.name === cat.parent);
+                            const relatedPostsCount = allPosts.filter(p => p.category === cat.slug || p.category === cat.name).length;
+
+                            return (
+                              <tr key={cat._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/40 transition-colors group">
+                                <td className="px-6 py-4 font-extrabold text-slate-800 dark:text-slate-100">
+                                  <div className="flex items-center gap-2">
+                                    {cat.parent && <span className="text-teal-500 font-mono text-[11px]">↳</span>}
+                                    <span className="group-hover:text-teal-600 transition-colors">{cat.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 font-mono text-slate-500 dark:text-slate-400 text-[11px]" dir="ltr">
+                                  <span className="bg-slate-100 dark:bg-slate-900 px-2.5 py-1 rounded-lg">/{cat.slug}</span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  {parentCat ? (
+                                    <span className="px-3 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 font-bold rounded-lg text-[10px]">
+                                      زیر‌دسته از: {parentCat.name}
+                                    </span>
+                                  ) : (
+                                    <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold rounded-lg text-[10px]">
+                                      دسته‌بندی اصلی (مادر)
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-lg font-bold text-[10px]">
+                                    {relatedPostsCount} مقاله
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-left">
+                                  <div className="flex items-center justify-end gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAddSubcategoryStart(cat)}
+                                      className="text-teal-600 hover:text-teal-700 font-bold text-[10px] cursor-pointer"
+                                    >
+                                      + افزودن زیردسته
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditCategoryStart(cat)}
+                                      className="text-indigo-600 hover:text-indigo-700 font-bold text-[10px] cursor-pointer"
+                                    >
+                                      ویرایش
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteCategory(cat._id)}
+                                      className="text-rose-500 hover:text-rose-600 font-bold text-[10px] cursor-pointer"
+                                    >
+                                      حذف
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           ) : activeTab === "siteSettings" ? (
             /* --- SITE SETTINGS (ADMIN ONLY) --- */
