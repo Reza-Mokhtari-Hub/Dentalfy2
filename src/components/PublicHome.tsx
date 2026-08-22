@@ -51,25 +51,6 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
       .catch(err => console.error(err));
   }, []);
 
-  // Helper for safe post snippet extraction
-  const getPostSnippet = (p: IPost): string => {
-    if (p.summary && typeof p.summary === "string" && p.summary.trim()) {
-      return p.summary.trim();
-    }
-    if (Array.isArray(p.content)) {
-      for (const b of p.content) {
-        if (!b) continue;
-        if (b.type === "text") {
-          if (typeof b.value === "string" && b.value.trim()) return b.value.trim();
-          if (typeof b.value === "object" && b.value?.text && typeof b.value.text === "string" && b.value.text.trim()) {
-            return b.value.text.trim();
-          }
-        }
-      }
-    }
-    return "مطالعه متن کامل مقاله بالینی و متدولوژی درمان...";
-  };
-
   // Helper for full-text block extraction
   const getPostFullText = (p: IPost): string => {
     const parts: string[] = [];
@@ -219,7 +200,7 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
                         {post.title}
                       </h3>
                       <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 leading-relaxed">
-                        {getPostSnippet(post)}
+                        {post.content?.find(b => b.type === "text")?.value || "بدون خلاصه متنی..."}
                       </p>
                     </div>
                     <div className="px-6 py-4 border-t border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
@@ -679,7 +660,7 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
                         {post.title}
                       </h3>
                       <p className="text-slate-500 dark:text-slate-400 text-sm line-clamp-3 leading-relaxed font-medium">
-                        {getPostSnippet(post)}
+                        {post.content?.find(b => b.type === "text")?.value || "بدون خلاصه متنی..."}
                       </p>
                     </div>
                     <div className="px-8 py-6 border-t border-slate-50 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/30 flex items-center justify-between">
@@ -952,7 +933,7 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
 
           <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-wider">
-              {settings.siteName || "Dentalfy"} © {new Date().getFullYear()} • Clinical Learning Network
+              Powered by RMO © {new Date().getFullYear()} • Clinical Learning Network
             </p>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-400 dark:text-slate-500">
               <span className="relative flex h-2 w-2 mr-2">

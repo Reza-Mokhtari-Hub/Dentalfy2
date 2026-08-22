@@ -75,15 +75,15 @@ const CourseSchema = new Schema<ICourse>({
 // --- POST INTERFACE & SCHEMA ---
 export interface IBlock {
   id: string;
-  type: "text" | "heading" | "image" | "video" | "pdf" | "quote" | "list" | "divider" | "html" | "quiz";
+  type: string;
   value: any; // Stored block-specific values like content, Cloudinary URLs, lists, etc.
 }
 
 export interface IPost extends Document {
   title: string;
   content: IBlock[];
-  author: mongoose.Types.ObjectId | IUser;
-  course: mongoose.Types.ObjectId | ICourse | null;
+  author: mongoose.Types.ObjectId | IUser | string;
+  course: mongoose.Types.ObjectId | ICourse | string | null;
   category?: string;
   status: "draft" | "pending" | "published" | "rejected";
   tags?: string[];
@@ -100,15 +100,15 @@ export interface IPost extends Document {
 
 const BlockSchema = new Schema<IBlock>({
   id: { type: String, required: true },
-  type: { type: String, enum: ["text", "heading", "image", "video", "pdf", "quote", "list"], required: true },
+  type: { type: String, required: true },
   value: { type: Schema.Types.Mixed, required: true }
 }, { _id: false });
 
 const PostSchema = new Schema<IPost>({
-  title: { type: String, required: true },
+  title: { type: String, required: true, trim: true },
   content: { type: [BlockSchema], default: [] },
-  author: { type: Schema.Types.ObjectId, ref: "User", required: true },
-  course: { type: Schema.Types.ObjectId, ref: "Course", default: null },
+  author: { type: Schema.Types.Mixed, required: true },
+  course: { type: Schema.Types.Mixed, default: null },
   category: { type: String, default: "" },
   status: { type: String, enum: ["draft", "pending", "published", "rejected"], default: "pending" },
   tags: { type: [String], default: [] },

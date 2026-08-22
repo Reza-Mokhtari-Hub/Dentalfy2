@@ -84,15 +84,6 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const [newPasswordInput, setNewPasswordInput] = useState("");
   const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
 
-  useEffect(() => {
-    if (currentUser) {
-      setProfileNameInput(currentUser.name || "");
-      setProfileEmailInput(currentUser.email || "");
-      setProfilePicBase64(currentUser.profilePicture || "");
-      setProfileGenderInput(currentUser.gender || "");
-    }
-  }, [currentUser]);
-
   // Block Editor states
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isSavingPost, setIsSavingPost] = useState(false);

@@ -469,7 +469,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                     </div>
                     {comment.role !== "public" && (
                       <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-700">
-                        {comment.role === "admin" ? "مدیر علمی آکادمی" : "نویسنده مقاله"}
+                        {comment.role === "admin" ? "مدیر علمی RMO" : "نویسنده مقاله"}
                       </span>
                     )}
                   </div>

@@ -118,29 +118,13 @@ export default function App() {
     const storedSession = localStorage.getItem("dentalfy_session");
     if (storedSession) {
       try {
-        let userObj = JSON.parse(storedSession);
-        if (userObj.email === "admin@rmo.local") {
-          userObj.email = "dentalfyweb@gmail.com";
-        }
-        if (userObj.name === "مدیر سایت (RMO)") {
-          userObj.name = "مدیر سایت (Dentalfy)";
-        }
-        localStorage.setItem("dentalfy_session", JSON.stringify(userObj));
+        const userObj = JSON.parse(storedSession);
         setCurrentUser(userObj);
       } catch (err) {
         localStorage.removeItem("dentalfy_session");
       }
     }
   }, []);
-
-  const handleUpdateCurrentUser = (updated: Partial<IUser>) => {
-    setCurrentUser(prev => {
-      if (!prev) return prev;
-      const merged = { ...prev, ...updated };
-      localStorage.setItem("dentalfy_session", JSON.stringify(merged));
-      return merged;
-    });
-  };
 
   // Handle Login Authentication
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -343,30 +327,14 @@ export default function App() {
         />
       )}
 
-      {activeView === "post" && (
-        selectedPost ? (
-          <PostDetail 
-            post={selectedPost}
-            onBack={() => {
-              setSelectedPost(null);
-              setActiveView("home");
-            }}
-          />
-        ) : (
-          <PublicHome 
-            settings={settings}
-            courses={courses}
-            posts={posts}
-            onSelectPost={(post) => {
-              setSelectedPost(post);
-              setActiveView("post");
-            }}
-            onGoToPanel={() => setActiveView("panel")}
-            onRegisterAuthor={() => { setIsStudentMode(false); setIsRegisterMode(true); setRegisterRole("author"); setActiveView("panel"); }}
-            onStudentLogin={() => { setIsStudentMode(true); setIsRegisterMode(false); setActiveView("panel"); }}
-            onStudentRegister={() => { setIsStudentMode(true); setIsRegisterMode(true); setRegisterRole("student"); setActiveView("panel"); }}
-          />
-        )
+      {activeView === "post" && selectedPost && (
+        <PostDetail 
+          post={selectedPost}
+          onBack={() => {
+            setSelectedPost(null);
+            setActiveView("home");
+          }}
+        />
       )}
 
       {activeView === "panel" && (
@@ -381,7 +349,7 @@ export default function App() {
                 posts={posts}
                 onLogout={handleLogout}
                 onRefreshData={fetchInitialData}
-                onUpdateCurrentUser={handleUpdateCurrentUser}
+                onUpdateCurrentUser={(updated) => setCurrentUser(prev => prev ? { ...prev, ...updated } : prev)}
               />
             ) : (
               <PanelDashboard 
@@ -391,7 +359,7 @@ export default function App() {
                 posts={posts}
                 onLogout={handleLogout}
                 onRefreshData={fetchInitialData}
-                onUpdateCurrentUser={handleUpdateCurrentUser}
+                onUpdateCurrentUser={(updated) => setCurrentUser(prev => prev ? { ...prev, ...updated } : prev)}
               />
             )
           ) : (
@@ -776,7 +744,7 @@ export default function App() {
 
                       <div className="space-y-6">
                         <div className="space-y-2">
-                          <label className="text-[11px] font-black text-slate-500 mr-2">ایمیل سازمانی (Dentalfy)</label>
+                          <label className="text-[11px] font-black text-slate-500 mr-2">ایمیل سازمانی (RMO)</label>
                           <input 
                             type="email" 
                             value={loginEmail}

@@ -271,7 +271,7 @@ export async function startServer() {
   // Seed default data in memory store
   const defaultAdmin = {
     _id: "mem-admin-id",
-    name: "مدیر سایت (Dentalfy)",
+    name: "مدیر سایت (RMO)",
     email: "dentalfyweb@gmail.com",
     password: "rmo2026", // Plain text in fallback mode for easy playground use
     role: "admin" as const,
@@ -418,7 +418,7 @@ export async function startServer() {
     {
       _id: "mem-faq-1",
       question: "چگونه می‌توانم به عنوان نویسنده در دنتالفای فعالیت کنم؟",
-      answer: "کافیست در انتهای این صفحه، فرم «درخواست اکانت نویسندگی» را پر کنید. تخصص و ایمیل شما توسط مدیر آکادمی بررسی می‌شود و پس از تأیید، یک نام کاربری و رمز عبور موقت برای شما صادر خواهد شد.",
+      answer: "کافیست در انتهای این صفحه، فرم «درخواست اکانت نویسندگی» را پر کنید. تخصص و ایمیل شما توسط مدیر (RMO) بررسی می‌شود و پس از تأیید، یک نام کاربری و رمز عبور موقت برای شما صادر خواهد شد.",
       createdAt: new Date()
     },
     {
@@ -430,155 +430,11 @@ export async function startServer() {
     {
       _id: "mem-faq-3",
       question: "آیا مطالب منتشر شده مورد تأیید مراجع علمی هستند؟",
-      answer: "بله، تمام پست‌های ارسال شده توسط نویسندگان، ابتدا وارد صف انتظار تایید می‌شوند. مدیر علمی آکادمی مطالب را بررسی کرده و تنها در صورت صحت علمی و بالینی، آنها را منتشر می‌کند.",
+      answer: "بله، تمام پست‌های ارسال شده توسط نویسندگان، ابتدا وارد صف انتظار تایید می‌شوند. مدیر علمی آکادمی (RMO) مطالب را بررسی کرده و تنها در صورت صحت علمی و بالینی، آنها را منتشر می‌کند.",
       createdAt: new Date()
     }
   ];
   memoryDB.faqs.push(...defaultFAQs);
-
-  const defaultPosts = [
-    {
-      _id: "mem-post-1",
-      title: "پروتکل جامع آماده‌سازی و تراش لمینت‌های سرامیکی محافظه‌کارانه",
-      status: "published",
-      author: "mem-admin-id",
-      course: "mem-course-1",
-      summary: "بررسی مرحله به مرحله تکنیک‌های تراش مینایی، هدایت با سیلیکون ایندکس و متدهای سمان‌کردن ادهزیو در ونیرهای پرسلنی.",
-      content: [
-        {
-          id: "b-1",
-          type: "heading",
-          value: { text: "مقدمه و فلسفه دندانپزشکی کم‌تهاجمی (Minimally Invasive)", level: "h2" }
-        },
-        {
-          id: "b-2",
-          type: "text",
-          value: "در دندانپزشکی زیبایی مدرن، حفظ حداکثری بافت مینای دندان مهم‌ترین فاکتور تضمین‌کننده باندینگ پایدار لمینت‌های سرامیکی است. پیوند رزین به مینای دندان به مراتب قوی‌تر و بادوام‌تر از عاج است؛ بنابراین کاهش ضخامت تراش به ۰.۳ تا ۰.۵ میلی‌متر در سطح باکال اولویت اساسی دارد."
-        },
-        {
-          id: "b-3",
-          type: "quote",
-          value: { text: "حفظ حداقل ۷۰ درصد ساختار مینای دندان ضامن موفقیت درازمدت ونیرهای سرامیکی فلدسپاتیک و لیتیوم دی‌سیلیکات است.", author: "هیئت علمی آکادمی دنتالفای" }
-        },
-        {
-          id: "b-4",
-          type: "heading",
-          value: { text: "مراحل کلینیکی تراش محافظه‌کارانه", level: "h3" }
-        },
-        {
-          id: "b-5",
-          type: "list",
-          value: {
-            items: [
-              "ساخت موک‌آپ تشخیصی با رزین بیس‌اکریل بر روی مدل مطالعه",
-              "ایجاد شیارهای راهنمای عمق تراش (Depth Grooves) بر روی سطح موک‌آپ",
-              "یکدست کردن تراش فاسیال با فرزهای روند اند تیپر و حفظ خط تراش چامفر",
-              "تراش لبه اینسایزال به میزان ۱.۵ میلی‌متر جهت ایجاد جلوه ترنسلوسنسی طبیعی",
-              "پک کردن نخ زیر لثه‌ای سایز 000 جهت بازبینی مارجین ساب‌جینجیوال"
-            ],
-            listType: "ordered"
-          }
-        },
-        {
-          id: "b-6",
-          type: "quiz",
-          value: {
-            question: "هدف اصلی از ایجاد شیارهای عمق تراش (Depth Cuts) بر روی موک‌آپ تشخیصی چیست؟",
-            options: [
-              "جلوگیری از تراش بی‌رویه مینا و تطابق کامل با آناتومی نهایی ونیر",
-              "سرعت بخشیدن به فرآیند قالبگیری",
-              "بی‌حسی موضعی بهتر لثه",
-              "حذف کامل مینای سرویکال"
-            ],
-            correctAnswer: 0,
-            explanation: "تراش از روی موک‌آپ باعث می‌شود تنها به اندازه‌ای که برای ضخامت سرامیک لازم است تراش انجام شود و از اور-پریپاریشن غیرضروری در مناطقی که دندان لینگوال‌تر است جلوگیری گردد."
-          }
-        }
-      ],
-      createdAt: new Date()
-    },
-    {
-      _id: "mem-post-2",
-      title: "استراتژی‌های نوین یافتن و پاکسازی کانال MB2 در مولرهای اول ماگزیلا",
-      status: "published",
-      author: "mem-admin-id",
-      course: "mem-course-2",
-      summary: "راهنمای کلینیکی کشف کانال مزیوباکال دوم (MB2)، استفاده از لوپ‌های بزرگنمایی و تکنیک‌های شستشوی فعال اندودنتیک.",
-      content: [
-        {
-          id: "b-201",
-          type: "heading",
-          value: { text: "آناتومی پیچیده و شیوع کانال دوم مزیوباکال", level: "h2" }
-        },
-        {
-          id: "b-202",
-          type: "text",
-          value: "تحقیقات آناتومیک نشان می‌دهد کانال MB2 در بیش از ۸۵ درصد از مولرهای اول فک بالا وجود دارد. عدم درمان مناسب این کانال یکی از شایع‌ترین علل شکست درمان ریشه و بروز پری‌آپیکال لژن‌های مقاوم به درمان است."
-        },
-        {
-          id: "b-203",
-          type: "heading",
-          value: { text: "نقشه راه کلینیکی برای لوکالیزه کردن MB2", level: "h3" }
-        },
-        {
-          id: "b-204",
-          type: "list",
-          value: {
-            items: [
-              "بهبود اکسس کویتی به شکل ذوزنقه‌ای متمایل به پالاتال",
-              "استفاده از تیپ‌های اولتراسونیک با روکش دیاموند جهت حذف طاقچه عاجی (Dentin Bridge)",
-              "جستجو در خط اتصال کانال MB1 به سمت پالاتال به فاصله ۱ تا ۳ میلی‌متری",
-              "تست حباب شامپاین با سدیم هیپوکلریت ۵.۲۵٪ تحت بزرگنمایی میکروسکوپ یا لوپ ۴ برابر"
-            ],
-            listType: "ordered"
-          }
-        },
-        {
-          id: "b-205",
-          type: "quiz",
-          value: {
-            question: "کانال MB2 در مولر اول فک بالا نسبت به کانال اصلی MB1 معمولاً در چه موقعیتی قرار دارد؟",
-            options: [
-              "۱ تا ۳ میلی‌متر به سمت پالاتال و کمی مزیال‌تر",
-              "در مجاورت مستقیم کانال دیستوباکال",
-              "در مرکز اتاق پالپ",
-              "دقیقاً در زیر کاسپ کارابلی"
-            ],
-            correctAnswer: 0,
-            explanation: "اریفیس کانال MB2 همواره روی خطی قرار دارد که MB1 را به کانال پالاتال متصل می‌کند و معمولاً ۱ تا ۳ میلی‌متر متمایل به سمت پالاتال در زیر یک طاقچه عاجی پنهان است."
-          }
-        }
-      ],
-      createdAt: new Date()
-    },
-    {
-      _id: "mem-post-3",
-      title: "ارزیابی بیومکانیک و معیارهای ثبات اولیه در ایمپلنت‌های Immediate Loading",
-      status: "published",
-      author: "mem-admin-id",
-      course: "mem-course-3",
-      summary: "معیارهای تورک جایگذاری، آنالیز فرکانس تشدید (ISQ) و پروتکل‌های بارگذاری فوری در استخوان‌های تیپ ۳ و ۴.",
-      content: [
-        {
-          id: "b-301",
-          type: "heading",
-          value: { text: "اصول بیومکانیک و شاخص‌های موفقیت بارگذاری فوری", level: "h2" }
-        },
-        {
-          id: "b-302",
-          type: "text",
-          value: "بارگذاری فوری ایمپلنت دندانی نیازمند دستیابی به ثبات اولیه (Primary Stability) بالا به منظور جلوگیری از ریزحرکات (Micromovements) بیش از ۱۵۰ میکرون در فاز استئواینتگریشن است."
-        },
-        {
-          id: "b-303",
-          type: "quote",
-          value: { text: "حداقل گشتاور جایگذاری (Insertion Torque) برای لودینگ فوری ۳۵ الی ۴۵ نیوتن‌سانتی‌متر و عدد ISQ بالای ۶۵ پیشنهاد می‌شود.", author: "بخش جراحی فک و صورت دنتالفای" }
-        }
-      ],
-      createdAt: new Date()
-    }
-  ];
-  memoryDB.posts.push(...defaultPosts);
 
   // --- CONNECT MONGO DB OR FALLBACK TO MEMORY ---
   try {
@@ -588,34 +444,20 @@ export async function startServer() {
       console.log("🚀 Server running with primary MongoDB backend.");
 
       // Seed or update admin into MONGODB
-      // Clean up / migrate any old admin@rmo.local or RMO naming in MongoDB
-      await User.updateMany(
-        { $or: [{ email: "admin@rmo.local" }, { name: "مدیر سایت (RMO)" }] },
-        {
-          $set: {
-            name: "مدیر سایت (Dentalfy)",
-            email: "dentalfyweb@gmail.com"
-          }
-        }
-      );
-
       let adminUser = await User.findOne({ role: "admin" });
       if (!adminUser) {
         adminUser = await User.create({
-          name: "مدیر سایت (Dentalfy)",
+          name: "مدیر سایت (RMO)",
           email: "dentalfyweb@gmail.com",
           password: "rmo2026", // Standard string or hashed
           role: "admin",
           profilePicture: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200"
         });
         console.log("🌱 Seeded Default Admin to MongoDB: dentalfyweb@gmail.com / rmo2026");
-      } else {
-        if (adminUser.email === "admin@rmo.local" || adminUser.name === "مدیر سایت (RMO)") {
-          adminUser.name = "مدیر سایت (Dentalfy)";
-          adminUser.email = "dentalfyweb@gmail.com";
-          await adminUser.save();
-          console.log("🌱 Migrated admin user to dentalfyweb@gmail.com in MongoDB");
-        }
+      } else if (adminUser.email === "admin@rmo.local") {
+        adminUser.email = "dentalfyweb@gmail.com";
+        await adminUser.save();
+        console.log("🌱 Migrated admin email to dentalfyweb@gmail.com in MongoDB");
       }
 
       // Seed initial courses if not exist
@@ -705,24 +547,6 @@ export async function startServer() {
         if (!catExists) {
           await Category.create(cat);
           console.log(`🌱 Seeded Default Category: "${cat.name}" (${cat.slug})`);
-        }
-      }
-
-      // Seed initial posts in MongoDB if none exist
-      const postsCount = await Post.countDocuments();
-      if (postsCount === 0 && adminUser && dbCourses.length > 0) {
-        for (let i = 0; i < defaultPosts.length; i++) {
-          const dp = defaultPosts[i];
-          const matchedCourse = dbCourses[i % dbCourses.length];
-          await Post.create({
-            title: dp.title,
-            status: "published",
-            author: adminUser._id,
-            course: matchedCourse._id,
-            summary: dp.summary,
-            content: dp.content
-          });
-          console.log(`🌱 Seeded Default Post in MongoDB: "${dp.title}"`);
         }
       }
 
@@ -1742,126 +1566,194 @@ export async function startServer() {
 
   // Create Post
   app.post("/api/posts/create", async (req, res) => {
-    const { title, content, authorId, courseId, category, status, tags, summary, coverImage } = req.body;
-    if (!title || !authorId) {
-      return res.status(400).json({ error: "عنوان و شناسه نویسنده الزامی هستند" });
-    }
-
-    const trimmedTitle = title.trim();
-    const postStatus = status || "pending";
-
-    if (isDBConnected) {
-      // Prevent duplicate creation if a post with exact same title and author was created in last 10s
-      const tenSecondsAgo = new Date(Date.now() - 10000);
-      const recentDup = await Post.findOne({
-        title: trimmedTitle,
-        author: authorId,
-        createdAt: { $gte: tenSecondsAgo }
-      });
-
-      if (recentDup) {
-        console.warn(`⚠️ Blocked duplicate post creation for "${trimmedTitle}"`);
-        return res.json({
-          success: true,
-          message: "این مقاله قبلاً ثبت شده است.",
-          post: recentDup
-        });
+    try {
+      const { title, content, authorId, courseId, category, status, tags, summary, coverImage } = req.body;
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: "عنوان مقاله الزامی است" });
       }
 
-      await Post.create({
-        title: trimmedTitle,
-        content: content || [],
-        author: authorId,
-        course: courseId || null,
-        category: category || "",
-        status: postStatus,
-        tags: tags || [],
-        summary: summary || "",
-        coverImage: coverImage || "",
-        rejectionReason: ""
-      });
-    } else {
-      const tenSecondsAgo = Date.now() - 10000;
-      const recentDup = memoryDB.posts.find(p => 
-        p.title === trimmedTitle &&
-        (p.author === authorId || p.author?._id === authorId || p.author?.id === authorId) &&
-        new Date(p.createdAt).getTime() >= tenSecondsAgo
-      );
+      const trimmedTitle = title.trim();
+      const postStatus = status || "pending";
+      const sanitizedContent = Array.isArray(content) ? content : [];
 
-      if (recentDup) {
-        console.warn(`⚠️ Blocked duplicate post creation in memoryDB for "${trimmedTitle}"`);
+      if (isDBConnected) {
+        // Resolve author ID if needed
+        let resolvedAuthorId = authorId;
+        if (!resolvedAuthorId) {
+          const defaultAdmin = await User.findOne({ role: "admin" });
+          resolvedAuthorId = defaultAdmin?._id;
+        }
+
+        // Prevent duplicate creation if a post with exact same title and author was created in last 10s
+        const tenSecondsAgo = new Date(Date.now() - 10000);
+        let recentDup = null;
+        try {
+          recentDup = await Post.findOne({
+            title: trimmedTitle,
+            author: resolvedAuthorId,
+            createdAt: { $gte: tenSecondsAgo }
+          });
+        } catch (e) {
+          // ignore lookup failure
+        }
+
+        if (recentDup) {
+          console.warn(`⚠️ Blocked duplicate post creation for "${trimmedTitle}"`);
+          return res.json({
+            success: true,
+            message: "این مقاله قبلاً ثبت شده است.",
+            post: recentDup
+          });
+        }
+
+        const newPost = await Post.create({
+          title: trimmedTitle,
+          content: sanitizedContent,
+          author: resolvedAuthorId,
+          course: courseId || null,
+          category: category || "",
+          status: postStatus,
+          tags: Array.isArray(tags) ? tags : [],
+          summary: summary || "",
+          coverImage: coverImage || "",
+          rejectionReason: ""
+        });
+
+        await updateSystemStats();
         return res.json({
           success: true,
-          message: "این مقاله قبلاً ثبت شده است.",
-          post: recentDup
+          message: postStatus === "draft" ? "پست با موفقیت به صورت پیش‌نویس ذخیره شد" : "پست با موفقیت ثبت شد و در صف بررسی مدیر قرار گرفت",
+          post: newPost
+        });
+      } else {
+        const tenSecondsAgo = Date.now() - 10000;
+        const recentDup = memoryDB.posts.find(p => 
+          p.title === trimmedTitle &&
+          (p.author === authorId || p.author?._id === authorId || p.author?.id === authorId) &&
+          new Date(p.createdAt).getTime() >= tenSecondsAgo
+        );
+
+        if (recentDup) {
+          console.warn(`⚠️ Blocked duplicate post creation in memoryDB for "${trimmedTitle}"`);
+          return res.json({
+            success: true,
+            message: "این مقاله قبلاً ثبت شده است.",
+            post: recentDup
+          });
+        }
+
+        const newPost = {
+          _id: "mem-post-" + Date.now(),
+          title: trimmedTitle,
+          content: sanitizedContent,
+          author: authorId || "mem-admin-id",
+          course: courseId || null,
+          category: category || "",
+          status: postStatus,
+          tags: Array.isArray(tags) ? tags : [],
+          summary: summary || "",
+          coverImage: coverImage || "",
+          rejectionReason: "",
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        memoryDB.posts.push(newPost);
+        await updateSystemStats();
+        return res.json({
+          success: true,
+          message: postStatus === "draft" ? "پست با موفقیت به صورت پیش‌نویس ذخیره شد" : "پست با موفقیت ثبت شد و در صف بررسی مدیر قرار گرفت",
+          post: newPost
         });
       }
-
-      memoryDB.posts.push({
-        _id: "mem-post-" + Date.now(),
-        title: trimmedTitle,
-        content: content || [],
-        author: authorId,
-        course: courseId || null,
-        category: category || "",
-        status: postStatus,
-        tags: tags || [],
-        summary: summary || "",
-        coverImage: coverImage || "",
-        rejectionReason: "",
-        createdAt: new Date(),
-        updatedAt: new Date()
+    } catch (err: any) {
+      console.error("❌ Error in /api/posts/create:", err);
+      return res.status(500).json({ 
+        error: "خطا در ذخیره پست: " + (err.message || "خطای نامشخص در پایگاه داده")
       });
     }
-    await updateSystemStats();
-    res.json({ success: true, message: postStatus === "draft" ? "پست با موفقیت به صورت پیش‌نویس ذخیره شد" : "پست با موفقیت ثبت شد و در صف بررسی مدیر قرار گرفت" });
   });
 
   // Update/Edit Post
   app.post("/api/posts/update", async (req, res) => {
-    const { postId, title, content, courseId, category, status, tags, summary, coverImage } = req.body;
-    if (!postId || !title) {
-      return res.status(400).json({ error: "شناسه پست و عنوان الزامی است" });
-    }
+    try {
+      const { postId, title, content, courseId, category, status, tags, summary, coverImage } = req.body;
+      if (!postId || !title || !title.trim()) {
+        return res.status(400).json({ error: "شناسه پست و عنوان الزامی است" });
+      }
 
-    const postStatus = status || "pending";
+      const postStatus = status || "pending";
+      const sanitizedContent = Array.isArray(content) ? content : [];
 
-    if (isDBConnected) {
-      await Post.updateOne(
-        { _id: postId },
-        {
-          $set: {
-            title,
-            content,
+      if (isDBConnected) {
+        let postToUpdate = null;
+        try {
+          postToUpdate = await Post.findById(postId);
+        } catch (e) {
+          // ignore lookup failure
+        }
+
+        if (!postToUpdate) {
+          postToUpdate = await Post.findOne({ _id: postId });
+        }
+
+        if (postToUpdate) {
+          postToUpdate.title = title.trim();
+          postToUpdate.content = sanitizedContent;
+          postToUpdate.course = courseId || null;
+          postToUpdate.category = category || "";
+          postToUpdate.status = postStatus;
+          postToUpdate.tags = Array.isArray(tags) ? tags : [];
+          postToUpdate.summary = summary || "";
+          postToUpdate.coverImage = coverImage || "";
+          postToUpdate.rejectionReason = "";
+          await postToUpdate.save();
+        } else {
+          await Post.updateOne(
+            { _id: postId },
+            {
+              $set: {
+                title: title.trim(),
+                content: sanitizedContent,
+                course: courseId || null,
+                category: category || "",
+                status: postStatus,
+                tags: Array.isArray(tags) ? tags : [],
+                summary: summary || "",
+                coverImage: coverImage || "",
+                rejectionReason: ""
+              }
+            },
+            { upsert: false }
+          );
+        }
+      } else {
+        const idx = memoryDB.posts.findIndex(p => p._id === postId);
+        if (idx !== -1) {
+          memoryDB.posts[idx] = {
+            ...memoryDB.posts[idx],
+            title: title.trim(),
+            content: sanitizedContent,
             course: courseId || null,
             category: category || "",
             status: postStatus,
-            tags: tags || [],
+            tags: Array.isArray(tags) ? tags : [],
             summary: summary || "",
             coverImage: coverImage || "",
-            rejectionReason: ""
-          }
+            rejectionReason: "",
+            updatedAt: new Date()
+          };
         }
-      );
-    } else {
-      const idx = memoryDB.posts.findIndex(p => p._id === postId);
-      if (idx !== -1) {
-        memoryDB.posts[idx] = {
-          ...memoryDB.posts[idx],
-          title,
-          content,
-          course: courseId || null,
-          category: category || "",
-          status: postStatus,
-          tags: tags || [],
-          summary: summary || "",
-          coverImage: coverImage || "",
-          rejectionReason: "",
-          updatedAt: new Date()
-        };
       }
+      return res.json({ 
+        success: true, 
+        message: postStatus === "draft" ? "پست با موفقیت ویرایش و به صورت پیش‌نویس ذخیره شد" : "پست با موفقیت بروزرسانی شد و جهت تایید ارسال گردید" 
+      });
+    } catch (err: any) {
+      console.error("❌ Error in /api/posts/update:", err);
+      return res.status(500).json({ 
+        error: "خطا در بروزرسانی پست: " + (err.message || "خطای نامشخص در پایگاه داده")
+      });
     }
-    res.json({ success: true, message: postStatus === "draft" ? "پست با موفقیت ویرایش و به صورت پیش‌نویس ذخیره شد" : "پست با موفقیت بروزرسانی شد و جهت تایید ارسال گردید" });
   });
 
   // Delete Post
@@ -2469,7 +2361,7 @@ ${depthRequirement}
             <div dir="rtl" style="font-family: Tahoma, Geneva, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);">
               <div style="text-align: center; margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 20px;">
                 <h1 style="color: #0d9488; font-size: 24px; margin: 0; font-weight: 900;">آکادمی دنتالفای</h1>
-                <p style="color: #64748b; font-size: 13px; margin: 6px 0 0 0;">سامانه آموزش تخصصی دندانپزشکی دنتالفای</p>
+                <p style="color: #64748b; font-size: 13px; margin: 6px 0 0 0;">سامانه آموزش تخصصی دندانپزشکی RMO</p>
               </div>
               <p style="font-size: 14px; color: #334155; line-height: 1.6; font-weight: bold;">همکار گرامی،</p>
               <p style="font-size: 14px; color: #475569; line-height: 1.6;">جهت تکمیل ثبت‌نام و فعال‌سازی حساب کاربری خود در آکادمی دنتالفای، لطفا از کد تایید زیر استفاده نمایید:</p>
