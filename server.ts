@@ -12,10 +12,9 @@ import {
 const Notification = DBNotification;
 
 const CANDIDATE_GEMINI_MODELS = [
-  "gemini-2.5-flash",
-  "gemini-2.5-pro",
-  "gemini-3.6-flash",
-  "gemini-1.5-flash"
+  "gemini-3.7-flash",
+  "gemini-flash-latest",
+  "gemini-3.1-pro-preview"
 ];
 
 async function generateWithFallbackModel(ai: any, generateParams: any) {
@@ -82,7 +81,11 @@ export async function startServer() {
     siteSettings: {
       siteName: "dentalfy",
       heroText: "آکادمی آموزش تخصصی دندانپزشکی",
-      contactEmail: "info@dentalfy.local",
+      contactEmail: "dentalfyweb@gmail.com",
+      adminEmail: "dentalfyweb@gmail.com",
+      contactPhone: "",
+      address: "",
+      footerText: "پلتفرمی تحت وب برای یکپارچه‌سازی فرآیندهای آموزشی رفرنس دندانپزشکی و دسترسی به محتوای بالینی بازنگری‌شده.",
       colorTheme: {
         primary: "#14b8a6",
         secondary: "#0d9488",
@@ -90,9 +93,9 @@ export async function startServer() {
       },
       adminRecoveryCode: "rmo-recover-2026",
       stats: {
-        coursesCount: 3,
-        postsCount: 2,
-        authorsCount: 1
+        coursesCount: 0,
+        postsCount: 0,
+        authorsCount: 0
       }
     },
     accountRequests: [] as any[],
@@ -109,14 +112,43 @@ export async function startServer() {
 
   // Seed default categories
   const defaultCategories = [
-    { name: "ارتودنسی", parent: null, slug: "orthodontics" },
-    { name: "اندودنتیکس", parent: null, slug: "endodontics" },
     { name: "ترمیمی و زیبایی", parent: null, slug: "restorative-cosmetic" },
+    { name: "کامپوزیت ونیر و لایه‌گذاری", parent: "ترمیمی و زیبایی", slug: "composite-veneers" },
+    { name: "لمینت‌های سرامیکی", parent: "ترمیمی و زیبایی", slug: "ceramic-veneers" },
+    { name: "بلیچینگ و سفید کردن دندان", parent: "ترمیمی و زیبایی", slug: "tooth-bleaching" },
+    
+    { name: "اندودنتیکس (درمان ریشه)", parent: null, slug: "endodontics" },
+    { name: "فایلینگ روتاری و آماده‌سازی کانال", parent: "اندودنتیکس (درمان ریشه)", slug: "rotary-filing" },
+    { name: "اپکس لوکیتور و تعیین طول کارکرد", parent: "اندودنتیکس (درمان ریشه)", slug: "working-length" },
+    { name: "اوبتوراسیون و پرکردن ۳ بعدی کانال", parent: "اندودنتیکس (درمان ریشه)", slug: "obturation" },
+    { name: "درمان مجدد اندو (Re-Endo)", parent: "اندودنتیکس (درمان ریشه)", slug: "re-endo" },
+
+    { name: "پروتزهای دندانی", parent: null, slug: "prosthodontics" },
+    { name: "پروتز ثابت و روکش سرامیکی", parent: "پروتزهای دندانی", slug: "fixed-prosthodontics" },
+    { name: "پروتز متحرک و پارسیل", parent: "پروتزهای دندانی", slug: "removable-prosthodontics" },
+    { name: "پروتزهای متکی بر ایمپلنت", parent: "پروتزهای دندانی", slug: "implant-prosthetics" },
+
     { name: "جراحی فک و صورت", parent: null, slug: "maxillofacial-surgery" },
-    { name: "ایمپلنتولوژی", parent: "جراحی فک و صورت", slug: "implantology" },
-    { name: "پریودنتیکس", parent: null, slug: "periodontics" },
-    { name: "دندانپزشکی کودکان", parent: null, slug: "pediatric-dentistry" },
-    { name: "بیماری‌های دهان و فک", parent: null, slug: "oral-medicine" }
+    { name: "ایمپلنتولوژی و کاشت دندان", parent: "جراحی فک و صورت", slug: "implantology" },
+    { name: "جراحی دندان‌های نهفته (عقل)", parent: "جراحی فک و صورت", slug: "impacted-teeth-surgery" },
+    { name: "پیوند استخوان و سینوس لیفت", parent: "جراحی فک و صورت", slug: "bone-grafting" },
+
+    { name: "پریودنتیکس (بیماری‌های لثه)", parent: null, slug: "periodontics" },
+    { name: "جرم‌گیری و اسکیلینگ تخصصی", parent: "پریودنتیکس (بیماری‌های لثه)", slug: "scaling-root-planing" },
+    { name: "جراحی لثه و افزایشی طول تاج", parent: "پریودنتیکس (بیماری‌های لثه)", slug: "crown-lengthening" },
+
+    { name: "ارتودنسی", parent: null, slug: "orthodontics" },
+    { name: "ارتودنسی ثابت و سیم‌کشی", parent: "ارتودنسی", slug: "fixed-orthodontics" },
+    { name: "ارتودنسی شفاف و الاینرها", parent: "ارتودنسی", slug: "clear-aligners" },
+
+    { name: "دندانپزشکی کودکان (پدو)", parent: null, slug: "pediatric-dentistry" },
+    { name: "فیشور سیلانت و فلورایدتراپی", parent: "دندانپزشکی کودکان (پدو)", slug: "fissure-sealant" },
+    { name: "پالپوتومی و روکش‌های SSC", parent: "دندانپزشکی کودکان (پدو)", slug: "pulpotomy-ssc" },
+
+    { name: "بیماری‌های دهان و پاتولوژی", parent: null, slug: "oral-medicine" },
+    { name: "ضایعات دهانی و بیوپسی", parent: "بیماری‌های دهان و پاتولوژی", slug: "oral-lesions" },
+
+    { name: "رادیولوژی دهان و فک (CBCT)", parent: null, slug: "oral-radiology" }
   ];
   memoryDB.categories.push(...defaultCategories.map((c, i) => ({
     _id: "cat-" + (i + 1),
@@ -239,8 +271,8 @@ export async function startServer() {
   // Seed default data in memory store
   const defaultAdmin = {
     _id: "mem-admin-id",
-    name: "مدیر سایت (RMO)",
-    email: "admin@rmo.local",
+    name: "مدیر سایت (Dentalfy)",
+    email: "dentalfyweb@gmail.com",
     password: "rmo2026", // Plain text in fallback mode for easy playground use
     role: "admin" as const,
     profilePicture: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200",
@@ -250,79 +282,105 @@ export async function startServer() {
   };
   memoryDB.users.push(defaultAdmin);
 
-  const defaultAuthor = {
-    _id: "mem-author-id",
-    name: "دکتر زهرا کریمی",
-    email: "author@rmo.local",
-    password: "author2026",
-    role: "author" as const,
-    profilePicture: "https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=200",
-    resetPasswordRequested: false,
-    temporaryPassword: "",
-    createdAt: new Date()
-  };
-  memoryDB.users.push(defaultAuthor);
-
   const defaultCourses = [
     {
       _id: "mem-course-1",
       title: "دندانپزشکی ترمیمی و زیبایی",
       description: "آموزش اصول تراش، ادهزیو، لمینت‌های سرامیکی و کامپوزیت ونیرها",
-      syllabus: ["مفاهیم چسبندگی و ادهزیو", "اصول تراش لمینت دندان", "پلیمریزاسیون و لایت کیور"],
+      syllabus: [
+        "مفاهیم چسبندگی و سیستم‌های ادهزیو نسل جدید",
+        "اصول تراش لمینت دندان و آنالیز لبخند",
+        "تکنیک‌های لایه‌گذاری ناتورالیستیک کامپوزیت",
+        "پلیمریزاسیون، لایت کیور و فینیشینگ/پولیشینگ"
+      ],
       createdAt: new Date()
     },
     {
       _id: "mem-course-2",
       title: "درمان‌های اندودنتیکس تخصصی",
       description: "فایلینگ روتاری، پاکسازی کانال و متدهای نوین اوبتوراسیون",
-      syllabus: ["متدهای دسترسی به اتاق پالپ", "فایل‌های روتاری نیکل تیتانیوم", "شستشوی کانال ریشه دندان"],
+      syllabus: [
+        "متدهای دسترسی به اتاق پالپ و پیدا کردن کانال‌های اضافی (MB2)",
+        "کار با سیستم‌های فایل روتاری نیکل تیتانیوم",
+        "شستشوی کانال با هیپوکلریت و فعال‌سازی التراسونیک",
+        "اوبتوراسیون گرم و پرکردن ۳ بعدی کانال ریشه"
+      ],
       createdAt: new Date()
     },
     {
       _id: "mem-course-3",
       title: "ارتودنسی ثابت و متحرک",
       description: "بیومکانیک حرکت دندان، آنالیز سفالومتری و اپلاینس‌های دندانی",
-      syllabus: ["آنالیز تصاویر رادیوگرافی", "نیروهای بیومکانیکی ارتودنسی", "نگهدارنده‌ها و ریتینرها"],
+      syllabus: [
+        "آنالیز رادیوگرافی سفالومتری و تریسینگ دیجیتال",
+        "بیومکانیک سیستم‌های سیم و براکت ارتودنسی",
+        "الاینرهای شفاف و درمان‌های کم‌تهاجمی",
+        "دستگاه‌های متحرک، فونکسیونال و نگه‌دارنده‌ها (Retainers)"
+      ],
+      createdAt: new Date()
+    },
+    {
+      _id: "mem-course-4",
+      title: "پروتزهای ثابت و روکش‌های سرامیکی",
+      description: "اصول تراش پایه دندان، قالب‌گیری دیجیتال و اتصال سمنت رزینی",
+      syllabus: [
+        "اصول هندسی تراش دندان برای روکش‌های تمام‌سرامیک (Zirconia & E.max)",
+        "تکنیک‌های نخ زیرلثه‌ای و قالب‌گیری دقیق",
+        "پروتزهای متکی بر ایمپلنت و اباتمنت‌های اختصاصی",
+        "پروتزهای متحرک پارسیل و آتچمنت‌های کلینیکی"
+      ],
+      createdAt: new Date()
+    },
+    {
+      _id: "mem-course-5",
+      title: "جراحی فک، صورت و ایمپلنتولوژی",
+      description: "اصول جراحی نهفته، قراردهی ایمپلنت و پیوند استخوان سینوس",
+      syllabus: [
+        "تکنیک‌های جراحی دندان‌های عقل نهفته و نیمه‌نهفته",
+        "ارزیابی استخوان و پروتکل‌های جراحی کاشت ایمپلنت",
+        "تکنیک‌های پیوند استخوان (Bone Grafting) و GBR",
+        "جراحی سینوس لیفت (باز و بسته) و مدیریت عوارض"
+      ],
+      createdAt: new Date()
+    },
+    {
+      _id: "mem-course-6",
+      title: "پریودنتیکس و جراحی‌های لثه",
+      description: "مدیریت پاکت‌های پریودنتال، جراحی افزایش طول تاج و بازسازی بافت",
+      syllabus: [
+        "اسکیلینگ و روت پلنینگ عمیق تحت بی‌حسی (SRP)",
+        "جراحی افزایش طول تاج جهت بازسازی دندان (Crown Lengthening)",
+        "جراحی‌های پیوند لثه آزاد و گرافت بافت همبندی (CTG)",
+        "مدیریت بیماری‌های پری‌ایمپلنتایتیس (Peri-implantitis)"
+      ],
+      createdAt: new Date()
+    },
+    {
+      _id: "mem-course-7",
+      title: "دندانپزشکی کودکان و پیشگیری",
+      description: "تکنیک‌های کنترل رفتار، پالپوتومی دندان شیرین و روکش‌های SSC",
+      syllabus: [
+        "مدیریت رفتار کودک و کنترل ترس در دندانپزشکی",
+        "فیشور سیلانت، فلورایدتراپی و پیشگیری از پوسیدگی",
+        "درمان‌های زنده پالپ (پالپوتومی و پالپکتومی دندان شیرین)",
+        "بازسازی دندان‌های شیرین با روکش استیل زنگ‌نزن (SSC)"
+      ],
+      createdAt: new Date()
+    },
+    {
+      _id: "mem-course-8",
+      title: "بیماری‌ها و رادیولوژی دهان و فک",
+      description: "تشخیص ضایعات دهانی، تفسیر رادیوگرافی CBCT و بیوپسی کلینیکی",
+      syllabus: [
+        "شناسایی ضایعات سفید و قرمز دهانی و زخم‌های عودکننده",
+        "تکنیک‌های بیوپسی کلینیکی و نمونه‌برداری بافتی",
+        "تفسیر سی‌تی اسکن مخروطی (CBCT) در ایمپلنت و جراحی",
+        "مدیریت دردهای مزمن فک و صورت و اختلالات مفصل گیجگاهی-فکی (TMD)"
+      ],
       createdAt: new Date()
     }
   ];
   memoryDB.courses.push(...defaultCourses);
-
-  const defaultPosts = [
-    {
-      _id: "mem-post-1",
-      title: "راهنمای گام به گام تراش کامپوزیت ونیر مستقیم",
-      content: [
-        { id: "b1", type: "heading", value: "مقدمه و مانیفست تراش" },
-        { id: "b2", type: "text", value: "در بازسازی زیبایی با کامپوزیت ونیر مستقیم، هدف اصلی حفظ حداکثری ساختار دندان (بافت مینا) است. تراش محافظه‌کارانه به عمق حدود ۰.۳ تا ۰.۵ میلی‌متر به بقای طولانی‌مدت درمان کمک شایانی می‌کند." },
-        { id: "b3", type: "quote", value: "«بزرگترین هنر دندانپزشکی ترمیمی، تقلید بی‌نقص از طبیعت با کمترین مداخله است.»" },
-        { id: "b4", type: "heading", value: "مراحل کلیدی اجرا" },
-        { id: "b5", type: "list", value: ["آماده‌سازی لبه لثه‌ای با نخ زیرلثه", "انتخاب رنگ کامپوزیت در نور طبیعی", "بکارگیری باندیگ نسل پنجم یا پنجم اصلاح شده"] }
-      ],
-      author: defaultAuthor,
-      course: "mem-course-1",
-      status: "published" as const,
-      rejectionReason: "",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    },
-    {
-      _id: "mem-post-2",
-      title: "مدیریت ابزارهای روتاری در کانال‌های خمیده",
-      content: [
-        { id: "b11", type: "heading", value: "پیشگیری از شکستگی فایل در کانال" },
-        { id: "b12", type: "text", value: "کانال‌های با انحنای شدید همیشه چالش‌برانگیز هستند. استفاده از تورک مناسب و سرعت تنظیم‌شده موتور روتاری، شانس موفقیت درمان را تا ۹۰ درصد افزایش می‌دهد." },
-        { id: "b13", type: "video", value: "https://www.youtube.com/embed/dQw4w9WgXcQ" }
-      ],
-      author: defaultAuthor,
-      course: "mem-course-2",
-      status: "published" as const,
-      rejectionReason: "",
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }
-  ];
-  memoryDB.posts.push(...defaultPosts);
 
   const defaultLibraryDocs = [
     {
@@ -360,7 +418,7 @@ export async function startServer() {
     {
       _id: "mem-faq-1",
       question: "چگونه می‌توانم به عنوان نویسنده در دنتالفای فعالیت کنم؟",
-      answer: "کافیست در انتهای این صفحه، فرم «درخواست اکانت نویسندگی» را پر کنید. تخصص و ایمیل شما توسط مدیر (RMO) بررسی می‌شود و پس از تأیید، یک نام کاربری و رمز عبور موقت برای شما صادر خواهد شد.",
+      answer: "کافیست در انتهای این صفحه، فرم «درخواست اکانت نویسندگی» را پر کنید. تخصص و ایمیل شما توسط مدیر آکادمی بررسی می‌شود و پس از تأیید، یک نام کاربری و رمز عبور موقت برای شما صادر خواهد شد.",
       createdAt: new Date()
     },
     {
@@ -372,7 +430,7 @@ export async function startServer() {
     {
       _id: "mem-faq-3",
       question: "آیا مطالب منتشر شده مورد تأیید مراجع علمی هستند؟",
-      answer: "بله، تمام پست‌های ارسال شده توسط نویسندگان، ابتدا وارد صف انتظار تایید می‌شوند. مدیر علمی آکادمی (RMO) مطالب را بررسی کرده و تنها در صورت صحت علمی و بالینی، آنها را منتشر می‌کند.",
+      answer: "بله، تمام پست‌های ارسال شده توسط نویسندگان، ابتدا وارد صف انتظار تایید می‌شوند. مدیر علمی آکادمی مطالب را بررسی کرده و تنها در صورت صحت علمی و بالینی، آنها را منتشر می‌کند.",
       createdAt: new Date()
     }
   ];
@@ -385,16 +443,35 @@ export async function startServer() {
       isDBConnected = true;
       console.log("🚀 Server running with primary MongoDB backend.");
 
-      // Seed admin into MONGODB if not exist
-      const adminExists = await User.findOne({ email: "admin@rmo.local" });
-      if (!adminExists) {
-        await User.create({
-          name: "مدیر سایت (RMO)",
-          email: "admin@rmo.local",
+      // Seed or update admin into MONGODB
+      // Clean up / migrate any old admin@rmo.local or RMO naming in MongoDB
+      await User.updateMany(
+        { $or: [{ email: "admin@rmo.local" }, { name: "مدیر سایت (RMO)" }] },
+        {
+          $set: {
+            name: "مدیر سایت (Dentalfy)",
+            email: "dentalfyweb@gmail.com"
+          }
+        }
+      );
+
+      let adminUser = await User.findOne({ role: "admin" });
+      if (!adminUser) {
+        adminUser = await User.create({
+          name: "مدیر سایت (Dentalfy)",
+          email: "dentalfyweb@gmail.com",
           password: "rmo2026", // Standard string or hashed
           role: "admin",
-          profilePicture: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200"});
-        console.log("🌱 Seeded Default Admin to MongoDB: admin@rmo.local / rmo2026");
+          profilePicture: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200"
+        });
+        console.log("🌱 Seeded Default Admin to MongoDB: dentalfyweb@gmail.com / rmo2026");
+      } else {
+        if (adminUser.email === "admin@rmo.local" || adminUser.name === "مدیر سایت (RMO)") {
+          adminUser.name = "مدیر سایت (Dentalfy)";
+          adminUser.email = "dentalfyweb@gmail.com";
+          await adminUser.save();
+          console.log("🌱 Migrated admin user to dentalfyweb@gmail.com in MongoDB");
+        }
       }
 
       // Seed initial courses if not exist
@@ -412,69 +489,9 @@ export async function startServer() {
         }
       }
 
-      // Seed default posts
-      let dbAuthor = await User.findOne({ role: "author" });
-      if (!dbAuthor) {
-        dbAuthor = await User.create({
-          name: "دکتر مریم رضایی",
-          email: "author@rmo.local",
-          password: "author2026",
-          role: "author",
-          profilePicture: "https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=200",
-          resetPasswordRequested: false,
-          temporaryPassword: ""});
-        console.log("🌱 Seeded Default Author to MongoDB.");
-      }
-
+      // Seed default quizzes
       const restorative = dbCourses.find(c => c.title.includes("ترمیمی"));
       const endodontic = dbCourses.find(c => c.title.includes("اندودنتیکس"));
-
-      const postsToSeed = [
-        {
-          title: "راهنمای گام به گام تراش کامپوزیت ونیر مستقیم",
-          content: [
-            { id: "b1", type: "heading" as const, value: "مقدمه و مانیفست تراش" },
-            { id: "b2", type: "text" as const, value: "در بازسازی زیبایی با کامپوزیت ونیر مستقیم، هدف اصلی حفظ حداکثری ساختار دندان (بافت مینا) است. تراش محافظه‌کارانه به عمق حدود ۰.۳ تا ۰.۵ میلی‌متر به بقای طولانی‌مدت درمان کمک شایانی می‌کند." },
-            { id: "b3", type: "quote" as const, value: "«بزرگترین هنر دندانپزشکی ترمیمی، تقلید بی‌نقص از طبیعت با کمترین مداخله است.»" },
-            { id: "b4", type: "heading" as const, value: "مراحل کلیدی اجرا" },
-            { id: "b5", type: "list" as const, value: ["آماده‌سازی لبه لثه‌ای با نخ زیرلثه", "انتخاب رنگ کامپوزیت در نور طبیعی", "بکارگیری باندیگ نسل پنجم یا پنجم اصلاح شده"] }
-          ],
-          author: dbAuthor._id,
-          course: restorative ? restorative._id : null,
-          status: "published" as const,
-          rejectionReason: "",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        {
-          title: "مدیریت ابزارهای روتاری در کانال‌های خمیده",
-          content: [
-            { id: "b11", type: "heading" as const, value: "پیشگیری از شکستگی فایل در کانال" },
-            { id: "b12", type: "text" as const, value: "کانال‌های با انحنای شدید همیشه چالش‌برانگیز هستند. استفاده از تورک مناسب و سرعت تنظیم‌شده موتور روتاری، شانس موفقیت درمان را تا ۹۰ درصد افزایش می‌دهد." },
-            { id: "b13", type: "video" as const, value: "https://www.youtube.com/embed/dQw4w9WgXcQ" }
-          ],
-          author: dbAuthor._id,
-          course: endodontic ? endodontic._id : null,
-          status: "published" as const,
-          rejectionReason: "",
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
-      ];
-
-      for (const postToCreate of postsToSeed) {
-        const postExists = await Post.findOne({ title: postToCreate.title });
-        if (!postExists) {
-          await Post.create(postToCreate as any);
-          console.log(`🌱 Seeded Default Post: "${postToCreate.title}"`);
-        } else if (!postExists.course && postToCreate.course) {
-          postExists.course = postToCreate.course as any;
-          await postExists.save();
-          console.log(`🔗 Linked existing post "${postExists.title}" to course.`);
-        }
-      }
-
-      // Seed default quizzes
       if (restorative) {
         const quizExists = await Quiz.findOne({ courseId: restorative._id.toString() });
         if (!quizExists) {
@@ -548,20 +565,32 @@ export async function startServer() {
       }
 
       // Seed Site Settings if not exist
-      const settingsExist = await SiteSettings.findOne();
+      let settingsExist = await SiteSettings.findOne();
       if (!settingsExist) {
-        await SiteSettings.create({
+        settingsExist = await SiteSettings.create({
           siteName: "dentalfy",
           heroText: "آکادمی آموزش تخصصی دندانپزشکی",
-          contactEmail: "info@dentalfy.local",
+          contactEmail: "dentalfyweb@gmail.com",
+          adminEmail: "dentalfyweb@gmail.com",
+          contactPhone: "",
+          address: "",
+          footerText: "پلتفرمی تحت وب برای یکپارچه‌سازی فرآیندهای آموزشی رفرنس دندانپزشکی و دسترسی به محتوای بالینی بازنگری‌شده.",
           adminRecoveryCode: "rmo-recover-2026",
           stats: {
-            coursesCount: 3,
-            postsCount: 2,
-            authorsCount: 1
+            coursesCount: 0,
+            postsCount: 0,
+            authorsCount: 0
           }
         });
         console.log("🌱 Seeded Default Site Settings to MongoDB.");
+      } else {
+        if (settingsExist.contactEmail === "info@dentalfy.local" || !settingsExist.adminEmail) {
+          if (settingsExist.contactEmail === "info@dentalfy.local") {
+            settingsExist.contactEmail = "dentalfyweb@gmail.com";
+          }
+          settingsExist.adminEmail = settingsExist.adminEmail || "dentalfyweb@gmail.com";
+          await settingsExist.save();
+        }
       }
     } else {
       console.warn("⚠️ No MONGODB_URI environment variable detected. Running in MEMORY/LOCAL STORAGE fallback mode.");
@@ -571,7 +600,7 @@ export async function startServer() {
     isDBConnected = false;
   }
 
-  // Helper helper to dynamically manage counters
+  // Helper to dynamically manage counters
   async function updateSystemStats() {
     if (isDBConnected) {
       try {
@@ -579,40 +608,8 @@ export async function startServer() {
         const postsCount = await Post.countDocuments({ status: "published" });
         const authorsCount = await User.countDocuments({ role: "author" });
         await SiteSettings.updateOne({}, { $set: { "stats.coursesCount": coursesCount, "stats.postsCount": postsCount, "stats.authorsCount": authorsCount } });
-
-        // --- SELF-HEALING SYSTEM LINKING ---
-        // Ensure every course has at least one published post, so that student panel courses are never empty!
-        const courses = await Course.find();
-        for (const course of courses) {
-          const postCount = await Post.countDocuments({ course: course._id, status: "published" });
-          if (postCount === 0) {
-            // Find any published post currently unlinked, or even associate any published post
-            const unlinkedPost = await Post.findOne({ $or: [{ course: null }, { course: { $exists: false } }], status: "published" });
-            if (unlinkedPost) {
-              unlinkedPost.course = course._id as any;
-              await unlinkedPost.save();
-              console.log(`🔗 Self-Healed: Linked unlinked post "${unlinkedPost.title}" to course "${course.title}".`);
-            } else {
-              const anyPost = await Post.findOne({ status: "published" });
-              if (anyPost) {
-                // Clone the post to link to this course to avoid stealing it from another course
-                await Post.create({
-                  title: anyPost.title,
-                  content: anyPost.content,
-                  author: anyPost.author,
-                  course: course._id,
-                  status: "published",
-                  tags: anyPost.tags,
-                  summary: anyPost.summary,
-                  coverImage: anyPost.coverImage
-                });
-                console.log(`🔗 Self-Healed: Cloned and linked post "${anyPost.title}" to course "${course.title}".`);
-              }
-            }
-          }
-        }
       } catch (err) {
-        console.error("Error in updateSystemStats self-healing database:", err);
+        console.error("Error in updateSystemStats database:", err);
       }
     } else {
       memoryDB.siteSettings.stats.coursesCount = memoryDB.courses.length;
@@ -862,6 +859,7 @@ export async function startServer() {
     }
 
     try {
+      let updatedUser: any = null;
       if (isDBConnected) {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
@@ -877,6 +875,7 @@ export async function startServer() {
         if (email) user.email = email.toLowerCase().trim();
         if (profilePicture) user.profilePicture = profilePicture;
         await user.save();
+        updatedUser = user;
       } else {
         const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
@@ -892,9 +891,22 @@ export async function startServer() {
         if (email) user.email = email.toLowerCase().trim();
         if (profilePicture) user.profilePicture = profilePicture;
         if (gender !== undefined) user.gender = gender;
+        updatedUser = user;
       }
 
-      res.json({ success: true, message: "پروفایل با موفقیت بروزرسانی شد" });
+      res.json({
+        success: true,
+        message: "پروفایل با موفقیت بروزرسانی شد",
+        user: {
+          id: updatedUser._id || updatedUser.id,
+          _id: updatedUser._id || updatedUser.id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          role: updatedUser.role,
+          profilePicture: updatedUser.profilePicture || "",
+          gender: updatedUser.gender
+        }
+      });
     } catch (err: any) {
       res.status(500).json({ error: "خطا در بروزرسانی پروفایل" });
     }
@@ -1420,19 +1432,21 @@ export async function startServer() {
       return res.status(400).json({ error: "عنوان درس الزامی است" });
     }
 
+    let createdCourse: any = null;
     if (isDBConnected) {
-      await Course.create({ title, description, syllabus: syllabus || [] });
+      createdCourse = await Course.create({ title, description: description || "", syllabus: syllabus || [] });
     } else {
-      memoryDB.courses.push({
+      createdCourse = {
         _id: "mem-course-" + Date.now(),
         title,
-        description,
+        description: description || "",
         syllabus: syllabus || [],
         createdAt: new Date()
-      });
+      };
+      memoryDB.courses.push(createdCourse);
     }
     await updateSystemStats();
-    res.json({ success: true, message: "درس با موفقیت اضافه شد" });
+    res.json({ success: true, message: "درس با موفقیت اضافه شد", course: createdCourse });
   });
 
   // Posts API: List posts with FULL-TEXT search and Author filtering
@@ -1566,7 +1580,7 @@ export async function startServer() {
 
   // Create Post
   app.post("/api/posts/create", async (req, res) => {
-    const { title, content, authorId, courseId, status, tags, summary, coverImage } = req.body;
+    const { title, content, authorId, courseId, category, status, tags, summary, coverImage } = req.body;
     if (!title || !authorId) {
       return res.status(400).json({ error: "عنوان و شناسه نویسنده الزامی هستند" });
     }
@@ -1597,6 +1611,7 @@ export async function startServer() {
         content: content || [],
         author: authorId,
         course: courseId || null,
+        category: category || "",
         status: postStatus,
         tags: tags || [],
         summary: summary || "",
@@ -1626,6 +1641,7 @@ export async function startServer() {
         content: content || [],
         author: authorId,
         course: courseId || null,
+        category: category || "",
         status: postStatus,
         tags: tags || [],
         summary: summary || "",
@@ -1641,7 +1657,7 @@ export async function startServer() {
 
   // Update/Edit Post
   app.post("/api/posts/update", async (req, res) => {
-    const { postId, title, content, courseId, status, tags, summary, coverImage } = req.body;
+    const { postId, title, content, courseId, category, status, tags, summary, coverImage } = req.body;
     if (!postId || !title) {
       return res.status(400).json({ error: "شناسه پست و عنوان الزامی است" });
     }
@@ -1656,6 +1672,7 @@ export async function startServer() {
             title,
             content,
             course: courseId || null,
+            category: category || "",
             status: postStatus,
             tags: tags || [],
             summary: summary || "",
@@ -1672,6 +1689,7 @@ export async function startServer() {
           title,
           content,
           course: courseId || null,
+          category: category || "",
           status: postStatus,
           tags: tags || [],
           summary: summary || "",
@@ -1690,9 +1708,8 @@ export async function startServer() {
     try {
       if (isDBConnected) {
         await Post.deleteOne({ _id: id });
-      } else {
-        memoryDB.posts = memoryDB.posts.filter(p => p._id !== id);
       }
+      memoryDB.posts = memoryDB.posts.filter(p => p._id !== id);
       await updateSystemStats();
       res.json({ success: true, message: "پست با موفقیت حذف شد" });
     } catch (err: any) {
@@ -1771,14 +1788,31 @@ export async function startServer() {
 
   // Site Settings update (Admin)
   app.post("/api/settings/update", async (req, res) => {
-    const { siteName, heroText, contactEmail, primaryColor, secondaryColor, clinicalBlueColor, adminRecoveryCode, adminPassword } = req.body;
+    const { 
+      siteName, 
+      heroText, 
+      contactEmail, 
+      adminEmail,
+      contactPhone,
+      address,
+      footerText,
+      primaryColor, 
+      secondaryColor, 
+      clinicalBlueColor, 
+      adminRecoveryCode, 
+      adminPassword 
+    } = req.body;
 
     if (isDBConnected) {
       const current = await SiteSettings.findOne() || new SiteSettings();
-      if (siteName) current.siteName = siteName;
-      if (heroText) current.heroText = heroText;
-      if (contactEmail) current.contactEmail = contactEmail;
-      if (adminRecoveryCode) current.adminRecoveryCode = adminRecoveryCode;
+      if (siteName !== undefined) current.siteName = siteName;
+      if (heroText !== undefined) current.heroText = heroText;
+      if (contactEmail !== undefined) current.contactEmail = contactEmail;
+      if (adminEmail !== undefined) current.adminEmail = adminEmail;
+      if (contactPhone !== undefined) current.contactPhone = contactPhone;
+      if (address !== undefined) current.address = address;
+      if (footerText !== undefined) current.footerText = footerText;
+      if (adminRecoveryCode !== undefined) current.adminRecoveryCode = adminRecoveryCode;
       
       if (!current.colorTheme) current.colorTheme = { primary: "#14b8a6", secondary: "#0d9488", clinicalBlue: "#0284c7" };
       if (primaryColor) current.colorTheme.primary = primaryColor;
@@ -1791,10 +1825,14 @@ export async function startServer() {
         await User.updateOne({ role: "admin" }, { $set: { password: adminPassword } });
       }
     } else {
-      if (siteName) memoryDB.siteSettings.siteName = siteName;
-      if (heroText) memoryDB.siteSettings.heroText = heroText;
-      if (contactEmail) memoryDB.siteSettings.contactEmail = contactEmail;
-      if (adminRecoveryCode) memoryDB.siteSettings.adminRecoveryCode = adminRecoveryCode;
+      if (siteName !== undefined) memoryDB.siteSettings.siteName = siteName;
+      if (heroText !== undefined) memoryDB.siteSettings.heroText = heroText;
+      if (contactEmail !== undefined) memoryDB.siteSettings.contactEmail = contactEmail;
+      if (adminEmail !== undefined) memoryDB.siteSettings.adminEmail = adminEmail;
+      if (contactPhone !== undefined) memoryDB.siteSettings.contactPhone = contactPhone;
+      if (address !== undefined) memoryDB.siteSettings.address = address;
+      if (footerText !== undefined) memoryDB.siteSettings.footerText = footerText;
+      if (adminRecoveryCode !== undefined) memoryDB.siteSettings.adminRecoveryCode = adminRecoveryCode;
       
       if (primaryColor) memoryDB.siteSettings.colorTheme.primary = primaryColor;
       if (secondaryColor) memoryDB.siteSettings.colorTheme.secondary = secondaryColor;
@@ -1849,7 +1887,14 @@ export async function startServer() {
 
   // AI Assisted Post Generation Endpoint using Gemini API
   app.post("/api/ai/generate-post", async (req, res) => {
-    const { topic } = req.body;
+    const { 
+      topic, 
+      audience = "specialists", 
+      format = "comprehensive_article", 
+      depth = "ultra_deep", 
+      includeInteractive = true 
+    } = req.body;
+
     if (!topic || !topic.trim()) {
       return res.status(400).json({ error: "موضوع مقاله الزامی است" });
     }
@@ -1864,49 +1909,93 @@ export async function startServer() {
         apiKey,
         httpOptions: {
           headers: {
-            "User-Agent": "aistudio-build"}}});
+            "User-Agent": "aistudio-build"
+          }
+        }
+      });
 
-      const prompt = `شما یک دستیار هوش مصنوعی فوق تخصصی و پزشک دندانپزشک برجسته برای آکادمی دندانپزشکی "دنتالفای (dentalfy)" هستید.
-موضوع مقاله درخواستی کاربر: "${topic}"
+      const audienceDescription = audience === "patients"
+        ? "مخاطب: بیماران و عموم مردم (زبان ساده، آموزش به بیمار، مفاهیم روان علمی، بدون اصطلاحات پیچیده ناآشنا)"
+        : "مخاطب: دندانپزشکان، رزیدنت‌ها و دانشجویان دندانپزشکی (سطح تخصصی بالاترین عیار بالینی، اصطلاحات دقیق علمی به همراه معادل انگلیسی، دوز دقیق داروها، زاویه تراش، گیت‌ها و ابزارها)";
 
-یک مقاله علمی، بالینی، کاملاً معتبر و سازماندهی شده به زبان فارسی بنویسید. مقاله باید به صورت ساختاریافته شامل عنوان، خلاصه مختصر (مقدمه)، برچسب‌های مرتبط، و لیستی از بلوک‌های محتوایی (شامل پاراگراف‌های متنی، تیترهای فرعی، نقل‌قول‌ها، و لیست‌ها) باشد.
+      const formatDescription = 
+        format === "case_report"
+          ? "فرمت: گزارش کیس بالینی (Case Report - معرفی بیمار، یافته‌های کلینیکی و رادیوگرافیک، طرح درمان، مراحل گام به گام و فالوآپ)"
+          : format === "step_by_step"
+          ? "فرمت: راهنمای عملی و پروتکل اجرایی گام به گام (Step-by-Step Clinical Protocol - مراحل دقیق آمادگی، ابزارها، تکنیک و مراقبت)"
+          : format === "faq_guide"
+          ? "فرمت: پاسخ تخصصی به پرسش‌های شایع و چالش‌های بالینی (Clinical FAQ & Pitfalls)"
+          : "فرمت: مقاله جامع بالینی و آموزشی مرجع دندانپزشکی (Comprehensive Clinical Guide)";
 
-بلوک‌ها باید از ساختار زیر پیروی کنند:
-1. 'text': برای پاراگراف‌های مفصل بالینی و تجربی.
-2. 'heading': برای عناوین فرعی بالینی (h2 یا h3).
-3. 'quote': برای کلمات قصار، توصیه‌ها یا هشدارهای مهم یک دندانپزشک برجسته.
-4. 'list': برای دسته‌بندی مراحل درمان، تداخل‌های دارویی، تجهیزات یا راهنماهای سریع.`;
+      const depthRequirement = depth === "ultra_deep"
+        ? "عمق مقاله: بسیار جامع، مفصل و کاملاً علمی (حداقل ۱۰ تا ۱۵ بلوک محتوایی غنی شامل متن، جدول مقایسه‌ای HTML، نکات هشدار بالینی، لیست‌ها و کوییز)"
+        : "عمق مقاله: استاندارد و کاربردی (بین ۷ تا ۱۰ بلوک محتوایی با کیفیت بالا)";
+
+      const prompt = `شما استاد تمام دندانپزشکی، عضو ارشد هیئت علمی و نویسنده مقالات مرجع آکادمی "دنتالفای (Dentalfy)" هستید.
+موضوع درخواستی: "${topic}"
+${audienceDescription}
+${formatDescription}
+${depthRequirement}
+
+لطفاً یک مقاله فوق‌العاده باکیفیت، عمیق، جذاب و ساختاریافته به زبان فارسی بنویسید. 
+مقاله باید شامل موارد زیر باشد:
+1. title: عنوان جذاب، علمی و تخصصی.
+2. summary: چکیده بالینی جامع (۲ تا ۳ جمله).
+3. tags: ۴ تا ۶ برچسب و کلیدواژه تخصصی دندانپزشکی.
+4. blocks: آرایه‌ای شامل بلوک‌های متنوع با تیپ‌های زیر:
+   - 'heading': عناوین فرعی (headingLevel: 'h2' یا 'h3').
+   - 'text': پاراگراف‌های عمیق بالینی، مبانی آناتومی، روش درمان، متریال، دارو و دوز دقیق.
+   - 'quote': کادرهای توصیه استاد، کلید بالینی یا هشدار ایمنی (quoteAuthor مثل: "توصیه بالینی دنتالفای" یا "هشدار جراحی").
+   - 'list': لیست مراحل، اندیکاسیون‌ها، کنتراندیکاسیون‌ها، ابزارها یا عوارض (listType: 'bullet' یا 'ordered').
+   - 'html': جدول مقایسه‌ای HTML شکیل یا کادر استایل‌دار با Tailwind جهت رندر مستقیم (مثلاً جدول مقایسه متریال یا تکنیک‌ها).
+   - 'quiz': حداقل یک کوییز خودآزمایی با ۱ یا ۲ سوال چندگزینه‌ای کاربردی (شامل متن سوال، ۴ گزینه، ایندکس پاسخ صحیح و شرح دلیل پاسخ).
+
+تذکر بسیار مهم: هرگز محتوای کم‌ارزش یا خلاصه سطحی تولید نکنید. مقاله باید مانند یک فصل کتاب مرجع یا مقاله ISI دندانپزشکی خواندنی و کاملاً غنی باشد.`;
 
       const response = await generateWithFallbackModel(ai, {
         contents: prompt,
         config: {
-          systemInstruction: "شما مقالات علمی دندانپزشکی با دقت ۱۰۰٪ بالینی و اصطلاحات پزشکی و دندانپزشکی معتبر به زبان فارسی تولید می‌کنید.",
+          systemInstruction: "شما مقالات فوق تخصصی دندانپزشکی با دقت ۱۰۰٪ بالینی و اصطلاحات معتبر پزشکی تولید می‌کنید.",
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              title: { type: Type.STRING, description: "A highly professional and appealing Persian title for the article." },
-              summary: { type: Type.STRING, description: "A concise 1-2 sentence clinical summary of the article in Persian." },
+              title: { type: Type.STRING, description: "Professional Persian title" },
+              summary: { type: Type.STRING, description: "Detailed clinical summary in Persian" },
               tags: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
-                description: "List of 3-5 relevant dentistry tags/keywords in Persian."
+                description: "4-6 relevant dentistry tags in Persian"
               },
               blocks: {
                 type: Type.ARRAY,
-                description: "The structured content of the article split into logical order blocks.",
+                description: "Structured content blocks",
                 items: {
                   type: Type.OBJECT,
                   properties: {
-                    type: { type: Type.STRING, description: "Block type: 'text', 'heading', 'quote', 'list'." },
-                    textValue: { type: Type.STRING, description: "Text content for the paragraph, heading title, or quote text." },
-                    headingLevel: { type: Type.STRING, description: "If type is 'heading', 'h2' or 'h3'. Default 'h2'." },
-                    quoteAuthor: { type: Type.STRING, description: "If type is 'quote', the author or speaker of the recommendation." },
-                    listType: { type: Type.STRING, description: "If type is 'list', 'bullet' or 'ordered'. Default 'bullet'." },
+                    type: { type: Type.STRING, description: "Block type: 'text', 'heading', 'quote', 'list', 'html', 'quiz'." },
+                    textValue: { type: Type.STRING, description: "Text content for text, heading, or quote." },
+                    headingLevel: { type: Type.STRING, description: "If type='heading', 'h2' or 'h3'." },
+                    quoteAuthor: { type: Type.STRING, description: "If type='quote', author or clinical alert badge." },
+                    listType: { type: Type.STRING, description: "If type='list', 'bullet' or 'ordered'." },
                     listItems: {
                       type: Type.ARRAY,
                       items: { type: Type.STRING },
-                      description: "List of strings if type is 'list'."
+                      description: "List items if type='list'."
+                    },
+                    htmlCode: { type: Type.STRING, description: "If type='html', clean Tailwind HTML code (e.g. table or box)." },
+                    quizData: {
+                      type: Type.OBJECT,
+                      description: "If type='quiz', quiz question data.",
+                      properties: {
+                        questionText: { type: Type.STRING },
+                        options: {
+                          type: Type.ARRAY,
+                          items: { type: Type.STRING }
+                        },
+                        correctAnswerIndex: { type: Type.INTEGER },
+                        explanation: { type: Type.STRING }
+                      }
                     }
                   },
                   required: ["type"]
@@ -1923,7 +2012,7 @@ export async function startServer() {
       }
 
       const rawJson = JSON.parse(response.text.trim());
-      
+
       // Map generated blocks to the frontend IBlock format
       const mappedBlocks = rawJson.blocks.map((block: any, index: number) => {
         const id = `b-ai-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 4)}`;
@@ -1939,12 +2028,23 @@ export async function startServer() {
         } else if (block.type === "quote") {
           value = {
             text: block.textValue || "",
-            author: block.quoteAuthor || "دستیار دنتالفای"
+            author: block.quoteAuthor || "نکته کلیدی دنتالفای"
           };
         } else if (block.type === "list") {
           value = {
             items: block.listItems || [],
             listType: block.listType || "bullet"
+          };
+        } else if (block.type === "html") {
+          value = {
+            code: block.htmlCode || block.textValue || ""
+          };
+        } else if (block.type === "quiz") {
+          value = {
+            question: block.quizData?.questionText || "سوال خودآزمایی بالینی",
+            options: block.quizData?.options || ["گزینه ۱", "گزینه ۲", "گزینه ۳", "گزینه ۴"],
+            correctAnswer: block.quizData?.correctAnswerIndex ?? 0,
+            explanation: block.quizData?.explanation || ""
           };
         } else {
           value = block.textValue || "";
@@ -2207,7 +2307,7 @@ export async function startServer() {
             <div dir="rtl" style="font-family: Tahoma, Geneva, sans-serif; max-width: 500px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 16px; padding: 28px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);">
               <div style="text-align: center; margin-bottom: 24px; border-bottom: 1px solid #f1f5f9; padding-bottom: 20px;">
                 <h1 style="color: #0d9488; font-size: 24px; margin: 0; font-weight: 900;">آکادمی دنتالفای</h1>
-                <p style="color: #64748b; font-size: 13px; margin: 6px 0 0 0;">سامانه آموزش تخصصی دندانپزشکی RMO</p>
+                <p style="color: #64748b; font-size: 13px; margin: 6px 0 0 0;">سامانه آموزش تخصصی دندانپزشکی دنتالفای</p>
               </div>
               <p style="font-size: 14px; color: #334155; line-height: 1.6; font-weight: bold;">همکار گرامی،</p>
               <p style="font-size: 14px; color: #475569; line-height: 1.6;">جهت تکمیل ثبت‌نام و فعال‌سازی حساب کاربری خود در آکادمی دنتالفای، لطفا از کد تایید زیر استفاده نمایید:</p>
@@ -3144,19 +3244,8 @@ export async function startServer() {
 
   app.post("/api/categories/seed-defaults", async (req, res) => {
     try {
-      const defaultCats = [
-        { name: "ارتودنسی", parent: null, slug: "orthodontics" },
-        { name: "اندودنتیکس", parent: null, slug: "endodontics" },
-        { name: "ترمیمی و زیبایی", parent: null, slug: "restorative-cosmetic" },
-        { name: "جراحی فک و صورت", parent: null, slug: "maxillofacial-surgery" },
-        { name: "ایمپلنتولوژی", parent: "جراحی فک و صورت", slug: "implantology" },
-        { name: "پریودنتیکس", parent: null, slug: "periodontics" },
-        { name: "دندانپزشکی کودکان", parent: null, slug: "pediatric-dentistry" },
-        { name: "بیماری‌های دهان و فک", parent: null, slug: "oral-medicine" }
-      ];
-
       if (isDBConnected) {
-        for (const cat of defaultCats) {
+        for (const cat of defaultCategories) {
           const exists = await Category.findOne({ slug: cat.slug });
           if (!exists) {
             await Category.create(cat);
@@ -3165,7 +3254,7 @@ export async function startServer() {
         const updatedList = await Category.find().sort({ createdAt: 1 });
         res.json({ success: true, categories: updatedList });
       } else {
-        for (const cat of defaultCats) {
+        for (const cat of defaultCategories) {
           const exists = memoryDB.categories.some(c => c.slug === cat.slug);
           if (!exists) {
             memoryDB.categories.push({
@@ -3432,6 +3521,9 @@ export async function startServer() {
     }
   });
 
+
+  // --- SERVE PUBLIC ASSETS (LOGOS, FAVICONS) ---
+  app.use(express.static(path.join(process.cwd(), "public")));
 
   // --- AUTOMATED SITEMAP & RSS FEEDS ---
   app.get("/robots.txt", (req, res) => {

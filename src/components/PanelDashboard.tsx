@@ -3,10 +3,12 @@ import {
   Shield, BookOpen, FileText, Users, Settings, LogOut, Menu, X, 
   PlusCircle, Trash2, CheckCircle, XCircle, ChevronLeft, ChevronUp, ChevronDown, 
   Upload, Download, HelpCircle, Lock, User, UserCog, RefreshCw, Eye, MessageSquare, Sparkles, Activity,
-  Key, Unlock, Camera, Award, Grid, Search, Filter, ShieldCheck, CheckSquare, Square, UserCheck, AlertCircle
+  Key, Unlock, Camera, Award, Grid, Search, Filter, ShieldCheck, CheckSquare, Square, UserCheck, AlertCircle,
+  Code, FileCode, Terminal, Copy, Check, ExternalLink, Layers, Maximize2, SlidersHorizontal, BookmarkCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { IUser, ICourse, IPost, ISiteSettings, IAccountRequest, IBlock, ILibraryDoc, IComment, IFAQ } from "../types";
+import { ClinicalHtmlRenderer } from "./ClinicalHtmlRenderer";
 
 interface PanelDashboardProps {
   currentUser: IUser;
@@ -15,9 +17,10 @@ interface PanelDashboardProps {
   posts: IPost[];
   onLogout: () => void;
   onRefreshData: () => void;
+  onUpdateCurrentUser?: (user: Partial<IUser>) => void;
 }
 
-export function PanelDashboard({ currentUser, settings, courses, posts, onLogout, onRefreshData }: PanelDashboardProps) {
+export function PanelDashboard({ currentUser, settings, courses, posts, onLogout, onRefreshData, onUpdateCurrentUser }: PanelDashboardProps) {
   const isAdmin = currentUser.role === "admin";
   const [activeTab, setActiveTab] = useState<"dashboard" | "posts" | "courses" | "categories" | "requests" | "siteSettings" | "profile" | "comments" | "libraryAndFaqs" | "users">("dashboard");
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -45,11 +48,29 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const [siteNameInput, setSiteNameInput] = useState(settings.siteName || "");
   const [heroTextInput, setHeroTextInput] = useState(settings.heroText || "");
   const [contactEmailInput, setContactEmailInput] = useState(settings.contactEmail || "");
+  const [adminEmailInput, setAdminEmailInput] = useState(settings.adminEmail || "");
+  const [contactPhoneInput, setContactPhoneInput] = useState(settings.contactPhone || "");
+  const [addressInput, setAddressInput] = useState(settings.address || "");
+  const [footerTextInput, setFooterTextInput] = useState(settings.footerText || "");
   const [adminRecoveryCodeInput, setAdminRecoveryCodeInput] = useState(settings.adminRecoveryCode || "");
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
   const [primaryColorInput, setPrimaryColorInput] = useState(settings.colorTheme?.primary || "#14b8a6");
   const [secondaryColorInput, setSecondaryColorInput] = useState(settings.colorTheme?.secondary || "#0d9488");
   const [clinicalBlueInput, setClinicalBlueInput] = useState(settings.colorTheme?.clinicalBlue || "#0284c7");
+
+  useEffect(() => {
+    setSiteNameInput(settings.siteName || "");
+    setHeroTextInput(settings.heroText || "");
+    setContactEmailInput(settings.contactEmail || "");
+    setAdminEmailInput(settings.adminEmail || "");
+    setContactPhoneInput(settings.contactPhone || "");
+    setAddressInput(settings.address || "");
+    setFooterTextInput(settings.footerText || "");
+    setAdminRecoveryCodeInput(settings.adminRecoveryCode || "");
+    setPrimaryColorInput(settings.colorTheme?.primary || "#14b8a6");
+    setSecondaryColorInput(settings.colorTheme?.secondary || "#0d9488");
+    setClinicalBlueInput(settings.colorTheme?.clinicalBlue || "#0284c7");
+  }, [settings]);
 
   // Profile Settings inputs
   const [profilePicBase64, setProfilePicBase64] = useState(currentUser.profilePicture || "");
@@ -63,6 +84,15 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const [newPasswordInput, setNewPasswordInput] = useState("");
   const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
 
+  useEffect(() => {
+    if (currentUser) {
+      setProfileNameInput(currentUser.name || "");
+      setProfileEmailInput(currentUser.email || "");
+      setProfilePicBase64(currentUser.profilePicture || "");
+      setProfileGenderInput(currentUser.gender || "");
+    }
+  }, [currentUser]);
+
   // Block Editor states
   const [isCreatingPost, setIsCreatingPost] = useState(false);
   const [isSavingPost, setIsSavingPost] = useState(false);
@@ -70,15 +100,33 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
   const [postTitle, setPostTitle] = useState("");
   const [postCourseId, setPostCourseId] = useState("");
+  const [postCategory, setPostCategory] = useState("");
   const [postBlocks, setPostBlocks] = useState<IBlock[]>([]);
   const [postTags, setPostTags] = useState("");
   const [postSummary, setPostSummary] = useState("");
   const [postCoverImage, setPostCoverImage] = useState("");
-  const [editorActiveSubTab, setEditorActiveSubTab] = useState<"edit" | "preview">("edit");
+  const [editorActiveSubTab, setEditorActiveSubTab] = useState<"edit" | "html_code" | "preview">("edit");
+  const [fullHtmlInput, setFullHtmlInput] = useState("");
+  const [htmlCopySuccess, setHtmlCopySuccess] = useState(false);
+  const [showHtmlBlockPreview, setShowHtmlBlockPreview] = useState<{ [blockId: string]: boolean }>({});
+  const [htmlPreviewDevice, setHtmlPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [htmlPreviewTheme, setHtmlPreviewTheme] = useState<"dark" | "light">("light");
+  const [htmlStudioFullscreen, setHtmlStudioFullscreen] = useState(false);
 
   // AI Assistant states
   const [aiTopicInput, setAiTopicInput] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiAudience, setAiAudience] = useState<"specialists" | "patients">("specialists");
+  const [aiFormat, setAiFormat] = useState<"comprehensive_article" | "case_report" | "step_by_step" | "faq_guide">("comprehensive_article");
+  const [aiDepth, setAiDepth] = useState<"standard" | "ultra_deep">("ultra_deep");
+  const [aiIncludeInteractive, setAiIncludeInteractive] = useState(true);
+  const [aiShowAdvancedOptions, setAiShowAdvancedOptions] = useState(false);
+  const [aiStepStatus, setAiStepStatus] = useState<string>("");
+
+  // Quick Course Creation state for Article Writing
+  const [showQuickAddCourse, setShowQuickAddCourse] = useState(false);
+  const [quickCourseTitle, setQuickCourseTitle] = useState("");
+  const [quickCourseAdding, setQuickCourseAdding] = useState(false);
 
   // Modals / Action states
   const [rejectionModalPostId, setRejectionModalPostId] = useState<string | null>(null);
@@ -423,19 +471,23 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
           userId: currentUser.id || currentUser._id,
           name: profileNameInput,
           email: profileEmailInput,
+          gender: profileGenderInput,
           oldPassword: oldPasswordInput || undefined,
           newPassword: newPasswordInput || undefined,
           profilePicture: finalPic
         })
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         setProfileMsg("پروفایل کاربری با موفقیت بروزرسانی شد.");
         setOldPasswordInput("");
         setNewPasswordInput("");
         setConfirmPasswordInput("");
+        if (data.user && onUpdateCurrentUser) {
+          onUpdateCurrentUser(data.user);
+        }
         onRefreshData();
       } else {
-        const data = await res.json();
         setProfileMsg(data.error || "تغییرات ثبت نشد.");
       }
     } catch (err) {
@@ -513,6 +565,10 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
           siteName: siteNameInput,
           heroText: heroTextInput,
           contactEmail: contactEmailInput,
+          adminEmail: adminEmailInput,
+          contactPhone: contactPhoneInput,
+          address: addressInput,
+          footerText: footerTextInput,
           adminRecoveryCode: adminRecoveryCodeInput,
           adminPassword: adminPasswordInput || undefined,
           primaryColor: primaryColorInput,
@@ -559,12 +615,50 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     }
   };
 
+  // Quick Course creation from Article Editor
+  const handleQuickAddCourse = async () => {
+    if (!quickCourseTitle.trim()) {
+      alert("لطفاً عنوان درس جدید را وارد نمائید.");
+      return;
+    }
+    setQuickCourseAdding(true);
+    try {
+      const res = await fetch("/api/courses/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          title: quickCourseTitle.trim(), 
+          description: "درس ثبت‌شده هنگام نگارش مقاله" 
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showMessage(`درس "${quickCourseTitle.trim()}" با موفقیت ایجاد و انتخاب شد.`);
+        setQuickCourseTitle("");
+        setShowQuickAddCourse(false);
+        await fetchAdminLists();
+        if (data.course?._id) {
+          setPostCourseId(data.course._id);
+        }
+      } else {
+        alert(data.error || "خطا در ایجاد درس جدید.");
+      }
+    } catch (err) {
+      alert("خطا در برقراری ارتباط با سرور.");
+    } finally {
+      setQuickCourseAdding(false);
+    }
+  };
+
   const handleStartEditCourse = (course: ICourse) => {
     setEditingCourseId(course._id);
     setNewCourseTitle(course.title);
     setNewCourseDesc(course.description || "");
     setNewCourseSyllabus(course.syllabus || []);
-    // Scroll to form or ensure visible
+    setTimeout(() => {
+      const el = document.getElementById("course-form-section");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -710,13 +804,21 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     setNewCatName(cat.name);
     setNewCatSlug(cat.slug);
     setNewCatParent(cat.parent || "");
+    setTimeout(() => {
+      const el = document.getElementById("category-form-section");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const handleAddSubcategoryStart = (parentCat: any) => {
     setEditingCategoryId(null);
     setNewCatName("");
     setNewCatSlug("");
-    setNewCatParent(parentCat._id || parentCat.name);
+    setNewCatParent(parentCat.name || parentCat._id);
+    setTimeout(() => {
+      const el = document.getElementById("category-form-section");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
   const handleCancelCategoryEdit = () => {
@@ -858,8 +960,98 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     });
   };
 
+  // Helper to convert existing post blocks into clean HTML string
+  const convertBlocksToHtml = (blocks: IBlock[]): string => {
+    if (!blocks || blocks.length === 0) return "<!-- مقاله خالی است -->";
+    return blocks.map(b => {
+      switch (b.type) {
+        case "heading": {
+          const val = typeof b.value === "object" ? b.value : { text: b.value || "", level: "h2" };
+          const tag = val.level === "h3" ? "h3" : "h2";
+          const cls = val.level === "h3" ? "text-lg font-bold text-slate-800 dark:text-slate-100 border-r-4 border-emerald-500 pr-2 my-4" : "text-xl font-black text-slate-900 dark:text-slate-100 border-r-4 border-teal-600 pr-3 my-5";
+          return `<${tag} class="${cls}">${val.text || ""}</${tag}>`;
+        }
+        case "text": {
+          const text = typeof b.value === "object" ? (b.value?.text || "") : (b.value || "");
+          return `<p class="my-4 text-slate-700 dark:text-slate-200 leading-relaxed font-medium">${(text || "").replace(/\n/g, "<br/>")}</p>`;
+        }
+        case "quote": {
+          const val = typeof b.value === "object" ? b.value : { text: b.value || "", author: "دنتالفای" };
+          return `<blockquote class="p-4 my-4 bg-teal-50 dark:bg-slate-800 border-r-4 border-teal-600 rounded-lg text-teal-900 dark:text-teal-300 font-medium italic">\n  <p>«${val.text || ""}»</p>\n  ${val.author ? `<cite class="block mt-2 text-xs font-bold text-teal-700 dark:text-teal-400 not-italic">— ${val.author}</cite>` : ""}\n</blockquote>`;
+        }
+        case "list": {
+          const val = typeof b.value === "object" && !Array.isArray(b.value) ? b.value : { items: Array.isArray(b.value) ? b.value : [""], listType: "bullet" };
+          const tag = val.listType === "ordered" ? "ol" : "ul";
+          const listCls = val.listType === "ordered" ? "list-decimal pr-6 my-4 space-y-2 text-slate-700 dark:text-slate-200 font-semibold text-sm" : "list-disc pr-6 my-4 space-y-2 text-slate-700 dark:text-slate-200 font-semibold text-sm";
+          const items = (val.items || []).map((it: string) => `  <li>${it}</li>`).join("\n");
+          return `<${tag} class="${listCls}">\n${items}\n</${tag}>`;
+        }
+        case "image": {
+          const val = typeof b.value === "object" ? b.value : { url: b.value || "", caption: "" };
+          return `<figure class="my-6 text-center">\n  <img src="${val.url || ""}" alt="${val.caption || "تصویر دنتالفای"}" class="rounded-2xl border border-slate-200 dark:border-slate-700 max-h-96 mx-auto object-cover shadow-md"/>\n  ${val.caption ? `<figcaption class="mt-2 text-xs text-slate-400 font-medium">${val.caption}</figcaption>` : ""}\n</figure>`;
+        }
+        case "video": {
+          const val = typeof b.value === "object" ? b.value : { url: b.value || "", caption: "" };
+          return `<div class="my-6 aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-800">\n  <iframe src="${val.url || ""}" class="w-full h-full" allowfullscreen></iframe>\n</div>`;
+        }
+        case "pdf": {
+          const val = typeof b.value === "object" ? b.value : { url: b.value || "", name: "فایل راهنما" };
+          return `<div class="my-4 p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center justify-between">\n  <span class="font-bold text-xs text-teal-700 dark:text-teal-300">📄 ${val.name || "سند ضمیمه"}</span>\n  <a href="${val.url || "#"}" download class="px-4 py-2 bg-teal-600 text-white font-bold text-xs rounded-xl hover:bg-teal-700 transition">دانلود PDF</a>\n</div>`;
+        }
+        case "divider": {
+          return `<hr class="my-6 border-t border-dashed border-slate-300 dark:border-slate-700"/>`;
+        }
+        case "html": {
+          const code = typeof b.value === "object" ? (b.value?.code || b.value?.text || "") : (b.value || "");
+          return code;
+        }
+        default:
+          return "";
+      }
+    }).join("\n\n");
+  };
+
+  const handleApplyFullHtmlCodeToPost = () => {
+    if (!fullHtmlInput.trim()) return;
+    const newHtmlBlock: IBlock = {
+      id: "b-html-" + Date.now(),
+      type: "html",
+      value: { code: fullHtmlInput }
+    };
+    setPostBlocks([newHtmlBlock]);
+    showMessage("کد HTML مقاله با موفقیت در ساختار ذخیره شد.");
+  };
+
+  const insertSnippetIntoFullHtml = (snippet: string) => {
+    setFullHtmlInput(prev => (prev ? prev + "\n\n" : "") + snippet);
+  };
+
+  const handleBeautifyHtml = () => {
+    if (!fullHtmlInput.trim()) return;
+    try {
+      let indent = 0;
+      const lines = fullHtmlInput.replace(/>\s*</g, ">\n<").split("\n");
+      const formatted = lines.map(line => {
+        let trimmed = line.trim();
+        if (!trimmed) return "";
+        if (trimmed.match(/^<\//)) {
+          indent = Math.max(0, indent - 1);
+        }
+        const indented = "  ".repeat(indent) + trimmed;
+        if (trimmed.match(/^<[^\/!?][^>]*[^\/]>$/) && !trimmed.match(/^<(img|hr|br|input|meta|link|source)/i)) {
+          indent++;
+        }
+        return indented;
+      }).filter(Boolean).join("\n");
+      setFullHtmlInput(formatted);
+      showMessage("کد HTML با موفقیت مرتب‌سازی و زیباسازی شد.");
+    } catch (e) {
+      alert("خطا در مرتب‌سازی کد HTML.");
+    }
+  };
+
   // Block Editor Actions
-  const handleAddNewBlock = (type: "text" | "heading" | "image" | "video" | "pdf" | "quote" | "list" | "divider") => {
+  const handleAddNewBlock = (type: "text" | "heading" | "image" | "video" | "pdf" | "quote" | "list" | "divider" | "html") => {
     let defaultValue: any = "";
     if (type === "list") {
       defaultValue = { items: [""], listType: "bullet" };
@@ -873,6 +1065,8 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
       defaultValue = { url: "", caption: "" };
     } else if (type === "pdf") {
       defaultValue = { url: "", name: "" };
+    } else if (type === "html") {
+      defaultValue = { code: '<div class="p-4 bg-teal-50/70 dark:bg-slate-800 border-r-4 border-teal-600 rounded-xl my-4 text-teal-900 dark:text-teal-200 font-medium">\n  <h4 class="font-extrabold text-xs mb-1 text-teal-800 dark:text-teal-300">📌 عنوان کادر سفارشی HTML</h4>\n  <p class="text-xs leading-relaxed">متن خود را با تگ‌های سفارشی HTML بنویسید...</p>\n</div>' };
     }
 
     const newBlock: IBlock = {
@@ -896,12 +1090,14 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     setEditingPostId(null);
     setPostTitle("");
     setPostCourseId(allCourses[0]?._id || "");
+    setPostCategory(allCategories[0]?.name || allCategories[0]?.slug || "ترمیمی و زیبایی");
     setPostBlocks([
       { id: "b-first-txt", type: "text", value: "" }
     ]);
     setPostTags("");
     setPostSummary("");
     setPostCoverImage("");
+    setFullHtmlInput("");
     setEditorActiveSubTab("edit");
     setIsCreatingPost(true);
   };
@@ -911,10 +1107,13 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
     setEditingPostId(post._id);
     setPostTitle(post.title);
     setPostCourseId(typeof post.course === "object" ? post.course?._id || "" : post.course || "");
-    setPostBlocks(post.content || []);
+    setPostCategory(post.category || allCategories[0]?.name || "ترمیمی و زیبایی");
+    const initialBlocks = post.content || [];
+    setPostBlocks(initialBlocks);
     setPostTags(post.tags ? post.tags.join(", ") : "");
     setPostSummary(post.summary || "");
     setPostCoverImage(post.coverImage || "");
+    setFullHtmlInput(convertBlocksToHtml(initialBlocks));
     setEditorActiveSubTab("edit");
     setIsCreatingPost(true);
   };
@@ -934,6 +1133,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
       title: postTitle.trim(),
       content: postBlocks,
       courseId: postCourseId,
+      category: postCategory,
       authorId: currentUser.id || currentUser._id,
       status: targetStatus,
       tags: postTags.split(",").map(t => t.trim()).filter(Boolean),
@@ -966,16 +1166,32 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
   // AI Assisted Article Generation Call
   const handleAIGeneratePost = async () => {
     if (!aiTopicInput.trim()) {
-      alert("لطفاً موضوع مقاله خود را در کادر مربوطه بنویسید.");
+      alert("لطفاً موضوع مقاله یا کلمات کلیدی مورد نظر خود را وارد نمائید.");
       return;
     }
 
     setAiGenerating(true);
+    setAiStepStatus("در حال تحلیل منابع و رفرنس‌های جدید بالینی...");
+
+    const t1 = setTimeout(() => {
+      setAiStepStatus("در حال نگارش تخصصی، تدوین جداول مقایسه‌ای و کادرهای بالینی...");
+    }, 2500);
+
+    const t2 = setTimeout(() => {
+      setAiStepStatus("در حال طراحی سوالات خودآزمایی و پایش نهایی کیفیت...");
+    }, 5500);
+
     try {
       const res = await fetch("/api/ai/generate-post", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: aiTopicInput.trim() })
+        body: JSON.stringify({ 
+          topic: aiTopicInput.trim(),
+          audience: aiAudience,
+          format: aiFormat,
+          depth: aiDepth,
+          includeInteractive: aiIncludeInteractive
+        })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -983,15 +1199,17 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
         setPostSummary(data.summary || "");
         setPostTags(data.tags || "");
         setPostBlocks(data.blocks || []);
-        setAiTopicInput("");
-        showMessage("مقاله فوق تخصصی دندانپزشکی با موفقیت توسط هوش مصنوعی تولید و بارگذاری شد!");
+        showMessage("مقاله فوق تخصصی و عمیق دندانپزشکی با موفقیت توسط هوش مصنوعی تولید و بارگذاری شد!");
       } else {
         alert(data.error || "تولید مقاله با هوش مصنوعی متاسفانه با خطا مواجه شد.");
       }
     } catch (err: any) {
       alert("خطا در برقراری ارتباط با سرور هوش مصنوعی.");
     } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
       setAiGenerating(false);
+      setAiStepStatus("");
     }
   };
 
@@ -1390,19 +1608,31 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   <ChevronLeft className="w-4.5 h-4.5" /> بازگشت
                 </button>
                 
-                {/* Editor Tabs: Edit vs Preview */}
-                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 dark:border-slate-700 gap-1">
+                {/* Editor Tabs: Edit vs HTML Code vs Preview */}
+                <div className="flex bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700 gap-1">
                   <button
                     onClick={() => setEditorActiveSubTab("edit")}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${editorActiveSubTab === "edit" ? "bg-white dark:bg-slate-800 text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-100"}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${editorActiveSubTab === "edit" ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-400 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-300"}`}
                   >
-                    ویرایش محتوا
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>ویرایشگر بلوکی</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFullHtmlInput(convertBlocksToHtml(postBlocks));
+                      setEditorActiveSubTab("html_code");
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${editorActiveSubTab === "html_code" ? "bg-slate-900 text-emerald-400 shadow-sm border border-slate-700" : "text-slate-500 hover:text-slate-800 dark:text-slate-300"}`}
+                  >
+                    <Code className="w-3.5 h-3.5" />
+                    <span>ویرایش مستقیم HTML</span>
                   </button>
                   <button
                     onClick={() => setEditorActiveSubTab("preview")}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${editorActiveSubTab === "preview" ? "bg-white dark:bg-slate-800 text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-100"}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${editorActiveSubTab === "preview" ? "bg-white dark:bg-slate-800 text-teal-700 dark:text-teal-400 shadow-sm" : "text-slate-500 hover:text-slate-800 dark:text-slate-300"}`}
                   >
-                    پیش‌نمایش بالینی
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>پیش‌نمایش بالینی</span>
                   </button>
                 </div>
 
@@ -1415,44 +1645,154 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                 /* --- EDITING VIEW --- */
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-6 shadow-sm">
                   {/* AI Writing Assistant Box */}
-                  <div className="bg-gradient-to-l from-teal-500/10 to-emerald-500/10 border border-teal-500/20 rounded-2xl p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-teal-600 rounded-lg flex items-center justify-center text-white">
-                        <Sparkles className="w-4 h-4" />
+                  <div className="bg-gradient-to-br from-teal-500/10 via-emerald-500/10 to-cyan-500/10 border border-teal-500/30 rounded-2xl p-5 space-y-4 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-teal-600/20 shrink-0">
+                          <Sparkles className="w-5 h-5 animate-pulse" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-black text-slate-900 dark:text-white">مولد فوق هوشمند و تخصصی مقالات دندانپزشکی</h4>
+                            <span className="px-2 py-0.5 bg-teal-600 text-white font-mono text-[9px] font-extrabold rounded-full">Gemini 3.7 Pro</span>
+                          </div>
+                          <p className="text-[11px] text-teal-700 dark:text-teal-300 font-bold mt-0.5">تولید هوشمند مقالات مرجع، کیس رپورت‌ها و پروتکل‌های اجرایی با جداول مقایسه‌ای و تست خودآزمایی</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-extrabold text-teal-800">دستیار نگارش علمی هوش مصنوعی (Gemini)</h4>
-                        <p className="text-[9px] text-teal-600 font-bold">تولید سریع مقالات تخصصی دندانپزشکی بر اساس کلمات کلیدی</p>
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setAiShowAdvancedOptions(!aiShowAdvancedOptions)}
+                        className="text-xs font-extrabold text-teal-700 dark:text-teal-300 hover:text-teal-900 dark:hover:text-teal-100 flex items-center gap-1.5 self-end md:self-auto bg-teal-500/10 hover:bg-teal-500/20 px-3 py-1.5 rounded-xl transition-all cursor-pointer"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
+                        {aiShowAdvancedOptions ? "بستن تنظیمات پیشرفته" : "تنظیمات پیشرفته هوش مصنوعی"}
+                      </button>
                     </div>
 
+                    {/* Main Input Bar */}
                     <div className="flex flex-col sm:flex-row gap-2">
                       <input 
                         type="text" 
                         value={aiTopicInput}
                         onChange={(e) => setAiTopicInput(e.target.value)}
-                        placeholder="مثال: روش‌های تراش لبه دندان در درمان ونیر کامپوزیت"
-                        className="flex-1 px-3 py-2.5 bg-white dark:bg-slate-800 border border-teal-100 rounded-xl text-xs focus:outline-none focus:border-teal-500 placeholder:text-slate-400 font-bold"
+                        placeholder="موضوع مقاله یا کلمات کلیدی (مثال: روش‌های تراش لبه دندان در درمان ونیر کامپوزیت)"
+                        className="flex-1 px-4 py-3 bg-white dark:bg-slate-800 border border-teal-200 dark:border-teal-800/60 rounded-xl text-xs focus:outline-none focus:border-teal-500 placeholder:text-slate-400 font-bold shadow-inner"
                       />
                       <button
                         type="button"
                         disabled={aiGenerating}
                         onClick={handleAIGeneratePost}
-                        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-teal-600/10 cursor-pointer shrink-0 flex items-center gap-1"
+                        className="px-6 py-3 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-teal-600/20 cursor-pointer shrink-0 flex items-center justify-center gap-2"
                       >
                         {aiGenerating ? (
                           <>
-                            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                            در حال تولید...
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            در حال تولید مقاله جامع...
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-3.5 h-3.5" />
-                            تولید هوشمند مقاله
+                            <Sparkles className="w-4 h-4" />
+                            تولید مقاله فوق تخصصی
                           </>
                         )}
                       </button>
                     </div>
+
+                    {/* Generation status banner */}
+                    {aiGenerating && (
+                      <div className="p-3 bg-teal-900/10 dark:bg-teal-900/30 border border-teal-500/30 rounded-xl flex items-center gap-3 animate-pulse">
+                        <span className="w-3 h-3 bg-teal-500 rounded-full animate-ping"></span>
+                        <p className="text-xs font-extrabold text-teal-800 dark:text-teal-200">
+                          {aiStepStatus || "در حال ارتباط با موتور فوق تخصصی Gemini..."}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Suggested Hot Topics */}
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <BookmarkCheck className="w-3 h-3 text-teal-600" /> موضوعات کلینیکی و کاربردی پیشنهادی:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          "پروتکل کامل آماده‌سازی کانال‌های خمیده اندودنتیکس با سیستم روتاری",
+                          "تکنیک‌های تراش و باندینگ لمینت سرامیکی و لمینت کامپوزیتی",
+                          "راهنمای بیحسی‌های موضعی فک پایین (تکنیک‌های ملامد و Gow-Gates)",
+                          "مدیریت تحلیل استخوان و پیوند استخوان در ایمپلنتولوژی",
+                          "تداخلات دارویی و هشدارهای سیستمیک در جراحی‌های دهان"
+                        ].map((promptText, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => setAiTopicInput(promptText)}
+                            className="px-2.5 py-1 bg-white/80 dark:bg-slate-800/80 hover:bg-teal-50 dark:hover:bg-teal-950/50 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-300 rounded-lg transition-all cursor-pointer"
+                          >
+                            + {promptText}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Advanced Options Panel */}
+                    {aiShowAdvancedOptions && (
+                      <div className="pt-3 border-t border-teal-500/20 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60">
+                        {/* Audience */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300">مخاطب مقاله</label>
+                          <select
+                            value={aiAudience}
+                            onChange={(e: any) => setAiAudience(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
+                          >
+                            <option value="specialists">دندانپزشکان و دانشجویان (تخصصی)</option>
+                            <option value="patients">بیماران و عموم (آموزشی و روان)</option>
+                          </select>
+                        </div>
+
+                        {/* Format */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300">فرمت ساختار محتوا</label>
+                          <select
+                            value={aiFormat}
+                            onChange={(e: any) => setAiFormat(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
+                          >
+                            <option value="comprehensive_article">مقاله جامع و مرجع بالینی</option>
+                            <option value="case_report">گزارش کیس بالینی (Case Report)</option>
+                            <option value="step_by_step">پروتکل اجرایی گام‌به‌گام</option>
+                            <option value="faq_guide">پاسخ به چالش‌ها و سوالات شایع</option>
+                          </select>
+                        </div>
+
+                        {/* Depth */}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300">عمق و حجم مقاله</label>
+                          <select
+                            value={aiDepth}
+                            onChange={(e: any) => setAiDepth(e.target.value)}
+                            className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
+                          >
+                            <option value="ultra_deep">بسیار جامع و عمیق (۱۰-۱۵ بلوک غنی)</option>
+                            <option value="standard">استاندارد و خلاصه (۷-۱۰ بلوک)</option>
+                          </select>
+                        </div>
+
+                        {/* Interactive Toggle */}
+                        <div className="space-y-1 flex flex-col justify-end">
+                          <label className="text-[10px] font-extrabold text-slate-600 dark:text-slate-300 mb-1">عناصر تعاملی</label>
+                          <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-slate-900 p-1.5 border border-slate-200 dark:border-slate-700 rounded-lg">
+                            <input
+                              type="checkbox"
+                              checked={aiIncludeInteractive}
+                              onChange={(e) => setAiIncludeInteractive(e.target.checked)}
+                              className="w-3.5 h-3.5 text-teal-600 rounded focus:ring-teal-500"
+                            />
+                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">جدول مقایسه‌ای + کوییز</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Grid for main metadata */}
@@ -1469,17 +1809,93 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       />
                     </div>
 
-                    {/* Course Selection */}
+                    {/* Category Selection */}
                     <div className="space-y-1">
-                      <label className="text-[11px] font-bold text-slate-500">مربوط به کدام درس تخصصی؟</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-slate-500">دسته‌بندی موضوعی مقاله</label>
+                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold">
+                          {allCategories.length > 0 ? `${allCategories.length} دسته تعریف‌شده` : "لیست عمومی"}
+                        </span>
+                      </div>
+                      <select 
+                        value={postCategory}
+                        onChange={(e) => setPostCategory(e.target.value)}
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100 font-bold cursor-pointer"
+                      >
+                        <option value="">-- انتخاب دسته‌بندی علمی --</option>
+                        {allCategories.length > 0 ? (
+                          allCategories.map(cat => (
+                            <option key={cat._id || cat.slug} value={cat.name || cat.slug}>
+                              {cat.name} {cat.parent ? `(زیرمجموعه ${cat.parent})` : ""}
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="ترمیمی و زیبایی">ترمیمی و زیبایی</option>
+                            <option value="اندودنتیکس">اندودنتیکس (درمان ریشه)</option>
+                            <option value="پروتزهای دندانی">پروتزهای دندانی</option>
+                            <option value="جراحی و ایمپلنت">جراحی و ایمپلنت</option>
+                            <option value="ارتودنسی">ارتودنسی</option>
+                            <option value="پریودنتیکس">پریودنتیکس</option>
+                            <option value="عمومی">عمومی و سایر</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Course Selection */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-slate-500">مربوط به کدام درس تخصصی؟</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowQuickAddCourse(!showQuickAddCourse)}
+                          className="text-[10px] text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-200 font-extrabold flex items-center gap-1 cursor-pointer bg-teal-50 dark:bg-teal-950/50 px-2 py-0.5 rounded-lg border border-teal-200 dark:border-teal-800/50 transition-all"
+                        >
+                          <PlusCircle className="w-3 h-3 text-teal-600" />
+                          {showQuickAddCourse ? "بستن فرم" : "+ تعریف درس جدید"}
+                        </button>
+                      </div>
+
+                      {showQuickAddCourse && (
+                        <div className="p-3 bg-teal-50/90 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 rounded-xl space-y-2 animate-fadeIn">
+                          <p className="text-[10px] font-extrabold text-teal-900 dark:text-teal-200">ایجاد و افزودن مستقیم درس به آکادمی:</p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={quickCourseTitle}
+                              onChange={(e) => setQuickCourseTitle(e.target.value)}
+                              placeholder="عنوان درس جدید (مثال: اندودنتیکس ۳ یا پروتز ثابت ۲)"
+                              className="flex-1 px-3 py-2 bg-white dark:bg-slate-800 border border-teal-200 dark:border-teal-700 rounded-lg text-xs font-bold focus:outline-none focus:border-teal-500"
+                            />
+                            <button
+                              type="button"
+                              disabled={quickCourseAdding}
+                              onClick={handleQuickAddCourse}
+                              className="px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                            >
+                              {quickCourseAdding ? "در حال ثبت..." : "ثبت و انتخاب"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <select 
                         value={postCourseId}
-                        onChange={(e) => setPostCourseId(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100 font-bold"
+                        onChange={(e) => {
+                          if (e.target.value === "__NEW__") {
+                            setShowQuickAddCourse(true);
+                          } else {
+                            setPostCourseId(e.target.value);
+                          }
+                        }}
+                        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-800 dark:text-slate-100 font-bold cursor-pointer"
                       >
+                        <option value="">-- بدون ارتباط مستقیم با درس (مقاله عمومی) --</option>
                         {allCourses.map(c => (
                           <option key={c._id} value={c._id}>{c.title}</option>
                         ))}
+                        <option value="__NEW__">➕ (+ ایجاد و افزودن درس جدید...)</option>
                       </select>
                     </div>
 
@@ -1901,6 +2317,81 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           );
                         })()}
 
+                        {/* HTML / Custom Code Block */}
+                        {block.type === "html" && (() => {
+                          const hVal = typeof block.value === "object" ? (block.value?.code || block.value?.text || "") : (block.value || "");
+                          const isPreview = !!showHtmlBlockPreview[block.id];
+
+                          const insertSnippetIntoBlock = (snippet: string) => {
+                            handleUpdateBlockValue(block.id, { code: (hVal ? hVal + "\n" : "") + snippet });
+                          };
+
+                          return (
+                            <div className="space-y-3">
+                              {/* HTML Snippets Toolbar for Block */}
+                              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-900 rounded-xl text-[10px] border border-slate-800">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-emerald-400 font-mono font-bold px-1.5 py-0.5 bg-emerald-950/80 rounded border border-emerald-800/50">کد آماده:</span>
+                                  <button 
+                                    type="button"
+                                    onClick={() => insertSnippetIntoBlock('<div class="p-4 my-4 bg-teal-50 dark:bg-slate-800 border-r-4 border-teal-600 rounded-xl text-teal-900 dark:text-teal-200 font-medium">\n  <h4 class="font-extrabold text-xs mb-1 text-teal-800 dark:text-teal-300">📌 نکته کلیدی بالینی</h4>\n  <p class="text-xs leading-relaxed">توضیحات و نکات کاربردی خود را وارد کنید...</p>\n</div>')}
+                                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold cursor-pointer"
+                                  >
+                                    + کادر نکته
+                                  </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => insertSnippetIntoBlock('<div class="overflow-x-auto my-4">\n  <table class="w-full border-collapse border border-slate-200 dark:border-slate-700 text-right text-xs">\n    <thead>\n      <tr class="bg-teal-600 text-white font-bold">\n        <th class="p-2 border border-teal-700">پارامتر</th>\n        <th class="p-2 border border-teal-700">روش A</th>\n        <th class="p-2 border border-teal-700">روش B</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr class="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-800/30">\n        <td class="p-2 font-bold border border-slate-200 dark:border-slate-800">مقاومت خمشی</td>\n        <td class="p-2 border border-slate-200 dark:border-slate-800">120 MPa</td>\n        <td class="p-2 border border-slate-200 dark:border-slate-800">350 MPa</td>\n      </tr>\n    </tbody>\n  </table>\n</div>')}
+                                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold cursor-pointer"
+                                  >
+                                    + جدول مقایسه‌ای
+                                  </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => insertSnippetIntoBlock('<span class="inline-block px-3 py-1 bg-teal-500/20 text-teal-300 font-extrabold text-[11px] rounded-full border border-teal-500/30 my-1">برچسب رنگی</span>')}
+                                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold cursor-pointer"
+                                  >
+                                    + بج رنگی
+                                  </button>
+                                  <button 
+                                    type="button"
+                                    onClick={() => insertSnippetIntoBlock('<a href="#" target="_blank" class="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow transition-all">\n  دانلود راهنما مستقیم\n</a>')}
+                                    className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold cursor-pointer"
+                                  >
+                                    + دکمه ویژه
+                                  </button>
+                                </div>
+                                
+                                <button
+                                  type="button"
+                                  onClick={() => setShowHtmlBlockPreview(prev => ({ ...prev, [block.id]: !prev[block.id] }))}
+                                  className={`px-3 py-1 rounded font-bold transition-all text-[10px] cursor-pointer flex items-center gap-1 ${isPreview ? "bg-teal-500 text-white" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+                                >
+                                  <Eye className="w-3 h-3" />
+                                  {isPreview ? "ویرایش کد" : "پیش‌نمایش این بلوک"}
+                                </button>
+                              </div>
+
+                              {!isPreview ? (
+                                <textarea
+                                  value={hVal}
+                                  onChange={(e) => handleUpdateBlockValue(block.id, { code: e.target.value })}
+                                  placeholder="کد HTML سفارشی خود را اینجا بنویسید (مانند <table>, <div>, <iframe>, <span>...)"
+                                  className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-emerald-400 focus:outline-none focus:border-teal-500 h-40 leading-relaxed dir-ltr shadow-inner"
+                                  dir="ltr"
+                                />
+                              ) : (
+                                <div className="p-4 bg-white dark:bg-slate-800 border border-teal-500/30 rounded-xl shadow-sm text-xs leading-relaxed overflow-x-auto">
+                                  <div className="text-[9px] font-bold text-teal-600 mb-2 font-mono flex items-center gap-1">
+                                    <span className="w-2 h-2 rounded-full bg-teal-500"></span> پیش‌نمایش رندر شده HTML:
+                                  </div>
+                                  <ClinicalHtmlRenderer htmlCode={hVal} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
                         {/* Divider Block */}
                         {block.type === "divider" && (
                           <div className="py-4 flex items-center justify-center">
@@ -1914,7 +2405,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                     ))}
 
                     {/* Add Block Toolbar */}
-                    <div className="flex flex-wrap gap-2 bg-slate-100 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 justify-center">
+                    <div className="flex flex-wrap gap-2 bg-slate-100 dark:bg-slate-900/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 justify-center">
                       <button onClick={() => handleAddNewBlock("text")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + متن پاراگراف
                       </button>
@@ -1935,6 +2426,9 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       </button>
                       <button onClick={() => handleAddNewBlock("pdf")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + سند ضمیمه/PDF
+                      </button>
+                      <button onClick={() => handleAddNewBlock("html")} className="px-3 py-1.5 bg-slate-900 text-emerald-400 hover:bg-slate-800 border border-slate-800 rounded-lg text-[10px] font-bold cursor-pointer transition-colors flex items-center gap-1 shadow-sm">
+                        <Code className="w-3.5 h-3.5" /> + کد / HTML مستقیم
                       </button>
                       <button onClick={() => handleAddNewBlock("divider")} className="px-3 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-teal-50 hover:text-teal-700 border border-slate-200 dark:border-slate-700 rounded-lg text-[10px] font-bold cursor-pointer transition-colors">
                         + خط جداکننده (Divider)
@@ -1975,6 +2469,250 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                         ارسال جهت بررسی و تایید مدیر علمی
                       </button>
                     )}
+                  </div>
+                </div>
+              ) : editorActiveSubTab === "html_code" ? (
+                /* --- PROFESSIONAL RAW HTML CODE STUDIO VIEW --- */
+                <div className={`bg-slate-900 text-slate-100 rounded-3xl border border-slate-800 p-6 space-y-6 shadow-2xl transition-all ${htmlStudioFullscreen ? "fixed inset-2 z-[9999] overflow-y-auto bg-slate-950 rounded-2xl" : ""}`}>
+                  {/* Studio Header */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold">
+                        <Code className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-white flex items-center gap-2">
+                          استودیو هوشمند کدنویسی مستقیم HTML5
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-mono rounded-full border border-emerald-500/30">Clinical HTML5 Studio Pro</span>
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-0.5">محیط کامل ویرایش مستقیم کدهای HTML، ساخت جدول، کادرهای بالینی و استخراج هوشمند.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleBeautifyHtml}
+                        className="px-3 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 text-xs font-bold rounded-xl transition-all cursor-pointer border border-indigo-500/40 flex items-center gap-1.5"
+                        title="مرتب‌سازی و کُد تمیز"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> زیباسازی کد (Beautify)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const html = convertBlocksToHtml(postBlocks);
+                          setFullHtmlInput(html);
+                          showMessage("کد HTML مقاله با موفقیت از روی بلوک‌ها بازسازی شد.");
+                        }}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer border border-slate-700 flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" /> استخراج از بلوک‌ها
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(fullHtmlInput);
+                          setHtmlCopySuccess(true);
+                          setTimeout(() => setHtmlCopySuccess(false), 2000);
+                        }}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer border border-slate-700 flex items-center gap-1.5"
+                      >
+                        {htmlCopySuccess ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                        {htmlCopySuccess ? "کپی شد!" : "کپی کد HTML"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHtmlStudioFullscreen(!htmlStudioFullscreen)}
+                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-all cursor-pointer border border-slate-700 flex items-center gap-1.5"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                        {htmlStudioFullscreen ? "خروج از تمام‌صفحه" : "تمام‌صفحه"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleApplyFullHtmlCodeToPost}
+                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl transition-all cursor-pointer shadow-lg shadow-emerald-600/20 flex items-center gap-1.5"
+                      >
+                        <CheckCircle className="w-4 h-4" /> همگام‌سازی و اعمال کد
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick HTML Snippet Preset Buttons */}
+                  <div className="bg-slate-950/80 p-4 rounded-2xl border border-slate-800/80 space-y-3">
+                    <div className="flex items-center justify-between text-xs font-extrabold text-slate-300">
+                      <span className="flex items-center gap-1.5 text-emerald-400">
+                        <Sparkles className="w-4 h-4" /> میانبرهای کدهای جاهای مختلف دندانپزشکی (Clinical HTML Snippets)
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono">درج با ۱ کلیک</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<div class="p-4 my-4 bg-teal-50 dark:bg-slate-800 border-r-4 border-teal-600 rounded-xl text-teal-900 dark:text-teal-200 font-medium shadow-sm">\n  <h4 class="font-extrabold text-xs mb-1 text-teal-800 dark:text-teal-300">📌 نکته کلیدی بالینی</h4>\n  <p class="text-xs leading-relaxed">توضیحات و نکات کاربردی دندانپزشکی را اینجا وارد نمائید...</p>\n</div>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-teal-500/50"
+                      >
+                        💡 کادر نکته (Callout)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<div class="p-4 my-4 bg-amber-50 dark:bg-amber-950/40 border-r-4 border-amber-500 rounded-xl text-amber-900 dark:text-amber-200 font-medium shadow-sm">\n  <h4 class="font-extrabold text-xs mb-1 text-amber-800 dark:text-amber-400">⚠️ هشدار ایمنی درمان</h4>\n  <p class="text-xs leading-relaxed">احتیاط‌ها و کنترااندیکاسیون‌های بالینی...</p>\n</div>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-amber-500/50"
+                      >
+                        ⚠️ باکس هشدار بالینی
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<div class="overflow-x-auto my-5">\n  <table class="w-full border-collapse border border-slate-200 dark:border-slate-700 text-right text-xs">\n    <thead>\n      <tr class="bg-teal-600 text-white font-bold">\n        <th class="p-2.5 border border-teal-700">ویژگی / متریال</th>\n        <th class="p-2.5 border border-teal-700">کامپوزیت خلفی</th>\n        <th class="p-2.5 border border-teal-700">آمالگام ماتریکس</th>\n      </tr>\n    </thead>\n    <tbody>\n      <tr class="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-800/30">\n        <td class="p-2.5 font-bold border border-slate-200 dark:border-slate-800">مقاومت سایشی</td>\n        <td class="p-2.5 border border-slate-200 dark:border-slate-800">عالی (۴۰۰ MPa)</td>\n        <td class="p-2.5 border border-slate-200 dark:border-slate-800">متوسط (۲۵۰ MPa)</td>\n      </tr>\n    </tbody>\n  </table>\n</div>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-emerald-500/50"
+                      >
+                        📊 جدول مقایسه‌ای
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<details class="my-4 border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-900/60">\n  <summary class="font-bold text-teal-700 dark:text-teal-400 cursor-pointer">❓ پرسش: پروتکل اچینگ در عاج دندان چگونه است؟</summary>\n  <p class="mt-2 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">پاسخ: اچینگ عاج نباید بیش از ۱۵ ثانیه به طول انجامد تا از آسیب به الیاف کلاژن جلوگیری شود.</p>\n</details>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-indigo-500/50"
+                      >
+                        📂 آکاردئون پرسش و پاسخ
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<div class="p-4 my-4 bg-slate-900 border border-teal-500/30 rounded-2xl shadow-lg">\n  <span class="px-2.5 py-0.5 bg-teal-500/20 text-teal-300 font-extrabold text-[10px] rounded-full">مرور کیس بالینی #۱۰۲</span>\n  <h4 class="font-black text-sm text-white mt-2">بازسازی اندودنتیک دندان ۶ بالا</h4>\n  <p class="text-xs text-slate-300 mt-1 leading-relaxed">گزارش مرحله به مرحله عصب‌کشی و ترمیم تاج با پین و کامپوزیت...</p>\n</div>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-cyan-500/50"
+                      >
+                        🩺 کارت کیس بالینی
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<span class="inline-block px-3 py-1 bg-teal-500/20 text-teal-300 font-extrabold text-xs rounded-full border border-teal-500/30 my-1"># پروتکل جراحی</span>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-sky-500/50"
+                      >
+                        🏷️ برچسب رنگی (Badge)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<div class="my-6 aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 shadow-xl">\n  <iframe src="https://www.aparat.com/video/video/embed/videohash/xxx/vt/frame" class="w-full h-full" allowfullscreen></iframe>\n</div>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-rose-500/50"
+                      >
+                        🎥 آی‌فریم ویدیو Aparat
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<a href="#" target="_blank" class="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all my-2">\n  📥 دریافت فایل راهنمای بالینی دندانپزشکی\n</a>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-purple-500/50"
+                      >
+                        🔘 دکمه دانلود / CTA
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertSnippetIntoFullHtml('<mark class="bg-amber-300/30 text-amber-200 px-2 py-0.5 rounded font-bold border border-amber-500/30">متن مورد نظر جهت هایلایت</mark>')}
+                        className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 rounded-xl font-bold cursor-pointer transition-all flex items-center gap-1 hover:border-amber-400/50"
+                      >
+                        🎨 هایلایت زرد
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Textarea Code Editor */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+                      <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                        <Terminal className="w-4 h-4" /> ویرایشگر کد HTML5 (Monospace Editor)
+                      </span>
+                      <span>تعداد کاراکتر: {fullHtmlInput.length.toLocaleString("fa-IR")} | خطوط: {fullHtmlInput.split("\n").length.toLocaleString("fa-IR")}</span>
+                    </div>
+                    <textarea
+                      value={fullHtmlInput}
+                      onChange={(e) => setFullHtmlInput(e.target.value)}
+                      placeholder="کدهای HTML خود را اینجا تایپ کنید یا کدهای آماده را از بالا درج نمائید..."
+                      className={`w-full px-5 py-4 bg-slate-950 border border-slate-800 rounded-2xl font-mono text-xs text-emerald-400 focus:outline-none focus:border-emerald-500 leading-relaxed dir-ltr shadow-inner ${htmlStudioFullscreen ? "h-[320px]" : "min-h-[360px]"}`}
+                      dir="ltr"
+                    />
+                  </div>
+
+                  {/* Live Rendered HTML Preview Controls & Container */}
+                  <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+                      <h4 className="text-xs font-bold text-slate-200 flex items-center gap-2">
+                        <Eye className="w-4 h-4 text-emerald-400" />
+                        پیش‌نمایش زنده و رندرشده خروجی کد HTML (Live Renderer)
+                      </h4>
+                      
+                      {/* Preview Controls: Theme & Viewport */}
+                      <div className="flex items-center gap-3">
+                        {/* Theme Switcher */}
+                        <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px] font-bold">
+                          <button
+                            type="button"
+                            onClick={() => setHtmlPreviewTheme("light")}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${htmlPreviewTheme === "light" ? "bg-white text-slate-900 shadow-xs" : "text-slate-400 hover:text-white"}`}
+                          >
+                            ☀️ تم روشن
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHtmlPreviewTheme("dark")}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${htmlPreviewTheme === "dark" ? "bg-slate-800 text-teal-300 shadow-xs" : "text-slate-400 hover:text-white"}`}
+                          >
+                            🌙 تم تاریک
+                          </button>
+                        </div>
+
+                        {/* Viewport Switcher */}
+                        <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px] font-bold">
+                          <button
+                            type="button"
+                            onClick={() => setHtmlPreviewDevice("desktop")}
+                            className={`px-2 py-1 rounded-md transition-all cursor-pointer ${htmlPreviewDevice === "desktop" ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"}`}
+                          >
+                            دسکتاپ
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHtmlPreviewDevice("tablet")}
+                            className={`px-2 py-1 rounded-md transition-all cursor-pointer ${htmlPreviewDevice === "tablet" ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"}`}
+                          >
+                            تبلت (768px)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setHtmlPreviewDevice("mobile")}
+                            className={`px-2 py-1 rounded-md transition-all cursor-pointer ${htmlPreviewDevice === "mobile" ? "bg-emerald-600 text-white" : "text-slate-400 hover:text-white"}`}
+                          >
+                            موبایل (375px)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Preview Box */}
+                    <div className="p-2 sm:p-4 bg-slate-900 rounded-xl overflow-x-auto">
+                      <div 
+                        className={`p-6 rounded-2xl border transition-all ${htmlPreviewTheme === "dark" ? "bg-slate-900 text-slate-100 border-slate-800" : "bg-white text-slate-800 border-slate-200"} ${htmlPreviewDevice === "mobile" ? "max-w-[375px] mx-auto shadow-2xl rounded-3xl border-4 border-slate-700" : htmlPreviewDevice === "tablet" ? "max-w-[768px] mx-auto" : "w-full"}`}
+                        dir="rtl"
+                      >
+                        {fullHtmlInput ? (
+                          <ClinicalHtmlRenderer htmlCode={fullHtmlInput} />
+                        ) : (
+                          <p className="text-slate-400 italic text-center py-10 text-xs font-medium">کد HTML را در ادیتور بالا وارد فرمائید تا پیش‌نمایش زنده اینجا نمایش داده شود.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Actions */}
+                  <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row gap-3">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        handleApplyFullHtmlCodeToPost();
+                        setEditorActiveSubTab("edit");
+                      }}
+                      className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs transition-all shadow-lg shadow-emerald-600/20 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" /> اعمال کد HTML و بازگشت به ویرایشگر بلوکی
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -2096,6 +2834,28 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                               <div className="w-full border-t border-dashed border-slate-200 dark:border-slate-700"></div>
                             </div>
                           );
+                        case "html": {
+                          const hVal = typeof block.value === "object" ? (block.value?.code || block.value?.text || "") : (block.value || "");
+                          return (
+                            <ClinicalHtmlRenderer key={block.id || idx} htmlCode={hVal} />
+                          );
+                        }
+                        case "quiz": {
+                          const qVal = block.value || {};
+                          return (
+                            <div key={block.id || idx} className="p-4 bg-slate-900 text-white rounded-xl text-xs space-y-2 border border-slate-800">
+                              <span className="text-teal-400 font-extrabold text-[10px]">کوییز و خودآزمایی بالینی:</span>
+                              <p className="font-bold">{qVal.question || "سوال خودآزمایی"}</p>
+                              <div className="grid grid-cols-2 gap-1.5 pt-1">
+                                {(qVal.options || []).map((o: string, oI: number) => (
+                                  <div key={oI} className={`p-2 rounded-lg border text-[11px] ${oI === (qVal.correctAnswer ?? 0) ? "border-emerald-500 bg-emerald-950/40 text-emerald-300 font-bold" : "border-slate-700 bg-slate-800 text-slate-300"}`}>
+                                    {oI + 1}. {o}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
                         default:
                           return null;
                       }
@@ -2584,26 +3344,27 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
             /* --- COURSES MANAGER (ADMIN ONLY) --- */
             <div className="space-y-10">
               {/* Add New Course form */}
-              <div className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none space-y-8">
+              <div id="course-form-section" className="bg-white dark:bg-slate-800 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none space-y-8">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20">
                     <BookOpen className="w-6 h-6 text-white" />
                   </div>
                   <div>
                     <h3 className="font-extrabold text-sm text-slate-800 dark:text-white leading-tight">
-                      {editingCourseId ? "ویرایش جزئیات سرفصل" : "تعریف سرفصل آموزشی جدید"}
+                      {editingCourseId ? `ویرایش جزئیات سرفصل: ${newCourseTitle}` : "تعریف سرفصل آموزشی جدید"}
                     </h3>
                     <p className="text-[10px] text-slate-400 font-bold italic leading-tight">مدیریت سرفصل‌های آکادمیک</p>
                   </div>
                   {editingCourseId && (
                     <button 
+                      type="button"
                       onClick={() => {
                         setEditingCourseId(null);
                         setNewCourseTitle("");
                         setNewCourseDesc("");
                         setNewCourseSyllabus([]);
                       }}
-                      className="mr-auto text-[10px] font-bold text-rose-500 hover:text-rose-600 underline"
+                      className="mr-auto text-[10px] font-bold text-rose-500 hover:text-rose-600 underline cursor-pointer"
                     >
                       انصراف از ویرایش
                     </button>
@@ -2636,33 +3397,50 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-[11px] font-bold text-slate-500 mr-2">افزودن مباحث و سرفصل‌های زیرمجموعه</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-500 mr-2">افزودن مباحث و سرفصل‌های زیرمجموعه</label>
+                      <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+                        {newCourseSyllabus.length} مبحث ثبت‌شده
+                      </span>
+                    </div>
                     <div className="flex gap-3">
                       <input 
                         type="text"
                         value={syllabusInput}
                         onChange={(e) => setSyllabusInput(e.target.value)}
-                        placeholder="نام مبحث را وارد کنید..."
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddSyllabusItem();
+                          }
+                        }}
+                        placeholder="نام مبحث را وارد کنید و کلید اینتر یا ثبت مبحث را بزنید..."
                         className="flex-1 px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all"
                       />
                       <button 
                         type="button"
                         onClick={handleAddSyllabusItem}
-                        className="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold rounded-2xl hover:bg-slate-800 dark:hover:bg-slate-100 transition-all active:scale-95 cursor-pointer shadow-lg"
+                        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-2xl transition-all active:scale-95 cursor-pointer shadow-lg shadow-indigo-600/20"
                       >
-                        ثبت مبحث
+                        + ثبت مبحث
                       </button>
                     </div>
                     
                     {newCourseSyllabus.length > 0 && (
-                      <div className="flex flex-wrap gap-2 pt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-4">
                         {newCourseSyllabus.map((item, idx) => (
-                          <div key={idx} className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-4 py-2 rounded-xl flex items-center gap-3 group">
-                            {item}
+                          <div key={idx} className="bg-indigo-50/80 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-4 py-3 rounded-2xl flex items-center justify-between group">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span className="w-5 h-5 rounded-lg bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-100 text-[10px] flex items-center justify-center shrink-0 font-extrabold">
+                                {idx + 1}
+                              </span>
+                              <span className="truncate">{item}</span>
+                            </div>
                             <button 
                               type="button"
                               onClick={() => setNewCourseSyllabus(prev => prev.filter((_, i) => i !== idx))}
-                              className="text-indigo-400 hover:text-rose-600 transition-colors cursor-pointer"
+                              className="text-indigo-400 hover:text-rose-600 transition-colors cursor-pointer shrink-0"
+                              title="حذف مبحث"
                             >
                               <XCircle className="w-4 h-4" />
                             </button>
@@ -2941,19 +3719,26 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               {/* Form and Quick Stats Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Category Registration / Edit Form */}
-                <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none space-y-6">
+                <div id="category-form-section" className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/10 dark:shadow-none space-y-6">
                   <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-700">
-                    <h4 className="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
-                      {editingCategoryId ? "ویرایش دسته‌بندی علمی" : "ثبت دسته‌بندی علمی جدید"}
-                    </h4>
-                    {editingCategoryId && (
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+                        {editingCategoryId ? "ویرایش دسته‌بندی علمی" : newCatParent ? `افزودن زیردسته موضوعی` : "ثبت دسته‌بندی علمی جدید"}
+                      </h4>
+                      {newCatParent && !editingCategoryId && (
+                        <p className="text-[10px] font-bold text-teal-600 dark:text-teal-400 mt-1">
+                          ↳ این دسته جدید به عنوان زیرمجموعه «{newCatParent}» تعریف خواهد شد.
+                        </p>
+                      )}
+                    </div>
+                    {(editingCategoryId || newCatParent) && (
                       <button
                         type="button"
                         onClick={handleCancelCategoryEdit}
                         className="text-xs font-bold text-rose-500 hover:text-rose-600 underline cursor-pointer"
                       >
-                        انصراف از ویرایش
+                        انصراف
                       </button>
                     )}
                   </div>
@@ -2973,7 +3758,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                               handleAutoGenerateSlug(e.target.value);
                             }
                           }}
-                          placeholder="مثال: ارتودنسی"
+                          placeholder="مثال: کامپوزیت ونیر و لایه‌گذاری"
                           className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-teal-500 transition-all"
                           required
                         />
@@ -2996,7 +3781,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                           type="text"
                           value={newCatSlug}
                           onChange={(e) => setNewCatSlug(e.target.value)}
-                          placeholder="orthodontics"
+                          placeholder="composite-veneers"
                           className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-teal-500 transition-all text-left font-mono"
                           dir="ltr"
                           required
@@ -3015,9 +3800,11 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       >
                         <option value="">فاقد دسته‌بندی مادر (دسته‌بندی اصلی)</option>
                         {allCategories
-                          .filter(c => c._id !== editingCategoryId)
+                          .filter(c => c._id !== editingCategoryId && c.name !== newCatName)
                           .map(cat => (
-                            <option key={cat._id} value={cat._id}>{cat.name} ({cat.slug})</option>
+                            <option key={cat._id || cat.slug} value={cat.name}>
+                              {cat.name} ({cat.slug})
+                            </option>
                           ))}
                       </select>
                     </div>
@@ -3027,7 +3814,7 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
                       disabled={isSavingCategory}
                       className="w-full py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-2xl transition-all cursor-pointer shadow-lg shadow-teal-600/20 active:scale-[0.99] disabled:opacity-50"
                     >
-                      {isSavingCategory ? "در حال ثبت اطلاعات..." : editingCategoryId ? "بروزرسانی دسته‌بندی علمی" : "ثبت دسته‌بندی علمی جدید"}
+                      {isSavingCategory ? "در حال ثبت اطلاعات..." : editingCategoryId ? "بروزرسانی دسته‌بندی علمی" : newCatParent ? "ثبت زیردسته جدید" : "ثبت دسته‌بندی علمی جدید"}
                     </button>
                   </form>
                 </div>
@@ -3191,58 +3978,98 @@ export function PanelDashboard({ currentUser, settings, courses, posts, onLogout
               </div>
 
               <form onSubmit={handleSettingsSubmit} className="space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[11px] font-bold text-slate-500 mr-2">نام برند آکادمی</label>
                     <input 
                       type="text" 
                       value={siteNameInput}
                       onChange={(e) => setSiteNameInput(e.target.value)}
+                      placeholder="مثال: dentalfy"
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 mr-2">پست الکترونیک رسمی</label>
+                    <label className="text-[11px] font-bold text-slate-500 mr-2">شعار تبلیغاتی اصلی (Hero Text)</label>
+                    <input 
+                      type="text" 
+                      value={heroTextInput}
+                      onChange={(e) => setHeroTextInput(e.target.value)}
+                      placeholder="مثال: آکادمی آموزش تخصصی دندانپزشکی"
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 mr-2">ایمیل عمومی / پشتیبانی آکادمی</label>
                     <input 
                       type="email" 
                       value={contactEmailInput}
                       onChange={(e) => setContactEmailInput(e.target.value)}
+                      placeholder="dentalfyweb@gmail.com"
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-left focus:outline-none focus:border-indigo-500 transition-all"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-slate-500 mr-2">ایمیل اختصاصی مدیریت سایت</label>
+                    <input 
+                      type="email" 
+                      value={adminEmailInput}
+                      onChange={(e) => setAdminEmailInput(e.target.value)}
+                      placeholder="dentalfyweb@gmail.com"
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-left focus:outline-none focus:border-indigo-500 transition-all"
                       dir="ltr"
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 mr-2">شعار تبلیغاتی اصلی (Hero Text)</label>
-                  <input 
-                    type="text" 
-                    value={heroTextInput}
-                    onChange={(e) => setHeroTextInput(e.target.value)}
-                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 mr-2">کد بازیابی اضطراری (Admin Recovery)</label>
+                    <label className="text-[11px] font-bold text-slate-500 mr-2">شماره تلفن ارتباطی (اختیاری)</label>
                     <input 
                       type="text" 
-                      value={adminRecoveryCodeInput}
-                      onChange={(e) => setAdminRecoveryCodeInput(e.target.value)}
-                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-center focus:outline-none focus:border-indigo-500 transition-all text-rose-500 font-mono"
+                      value={contactPhoneInput}
+                      onChange={(e) => setContactPhoneInput(e.target.value)}
+                      placeholder="مثال: ۰۲۱-۸۸۸۸۸۸۸۸"
+                      className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-left focus:outline-none focus:border-indigo-500 transition-all"
+                      dir="ltr"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] font-bold text-slate-500 mr-2">تغییر رمز عبور مدیریت</label>
+                    <label className="text-[11px] font-bold text-slate-500 mr-2">آدرس و موقعیت آکادمی (اختیاری)</label>
                     <input 
-                      type="password" 
-                      value={adminPasswordInput}
-                      onChange={(e) => setAdminPasswordInput(e.target.value)}
-                      placeholder="رمز عبور جدید..."
+                      type="text" 
+                      value={addressInput}
+                      onChange={(e) => setAddressInput(e.target.value)}
+                      placeholder="مثال: تهران، خیابان ولیعصر"
                       className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 mr-2">متن توضیحات پاورقی (فوتر سایت)</label>
+                  <textarea 
+                    rows={2}
+                    value={footerTextInput}
+                    onChange={(e) => setFooterTextInput(e.target.value)}
+                    placeholder="توضیح کوتاه درباره آکادمی در پایین سایت..."
+                    className="w-full px-5 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-medium focus:outline-none focus:border-indigo-500 transition-all resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 mr-2">تغییر رمز عبور مدیریت</label>
+                  <input 
+                    type="password" 
+                    value={adminPasswordInput}
+                    onChange={(e) => setAdminPasswordInput(e.target.value)}
+                    placeholder="در صورت تمایل به تغییر، رمز عبور جدید را وارد کنید..."
+                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition-all"
+                  />
                 </div>
 
                 {/* Color definitions */}

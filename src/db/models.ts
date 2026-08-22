@@ -75,7 +75,7 @@ const CourseSchema = new Schema<ICourse>({
 // --- POST INTERFACE & SCHEMA ---
 export interface IBlock {
   id: string;
-  type: "text" | "heading" | "image" | "video" | "pdf" | "quote" | "list";
+  type: "text" | "heading" | "image" | "video" | "pdf" | "quote" | "list" | "divider" | "html" | "quiz";
   value: any; // Stored block-specific values like content, Cloudinary URLs, lists, etc.
 }
 
@@ -84,6 +84,7 @@ export interface IPost extends Document {
   content: IBlock[];
   author: mongoose.Types.ObjectId | IUser;
   course: mongoose.Types.ObjectId | ICourse | null;
+  category?: string;
   status: "draft" | "pending" | "published" | "rejected";
   tags?: string[];
   summary?: string;
@@ -108,6 +109,7 @@ const PostSchema = new Schema<IPost>({
   content: { type: [BlockSchema], default: [] },
   author: { type: Schema.Types.ObjectId, ref: "User", required: true },
   course: { type: Schema.Types.ObjectId, ref: "Course", default: null },
+  category: { type: String, default: "" },
   status: { type: String, enum: ["draft", "pending", "published", "rejected"], default: "pending" },
   tags: { type: [String], default: [] },
   summary: { type: String, default: "" },
@@ -127,6 +129,10 @@ export interface ISiteSettings extends Document {
   siteName: string;
   heroText: string;
   contactEmail: string;
+  adminEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  footerText?: string;
   colorTheme: {
     primary: string;
     secondary: string;
@@ -143,7 +149,11 @@ export interface ISiteSettings extends Document {
 const SiteSettingsSchema = new Schema<ISiteSettings>({
   siteName: { type: String, default: "dentalfy" },
   heroText: { type: String, default: "آکادمی آموزش تخصصی دندانپزشکی" },
-  contactEmail: { type: String, default: "info@dentalfy.local" },
+  contactEmail: { type: String, default: "dentalfyweb@gmail.com" },
+  adminEmail: { type: String, default: "dentalfyweb@gmail.com" },
+  contactPhone: { type: String, default: "" },
+  address: { type: String, default: "" },
+  footerText: { type: String, default: "پلتفرمی تحت وب برای یکپارچه‌سازی فرآیندهای آموزشی رفرنس دندانپزشکی و دسترسی به محتوای بالینی بازنگری‌شده." },
   colorTheme: {
     primary: { type: String, default: "#14b8a6" },       // Turquoise
     secondary: { type: String, default: "#0d9488" },     // Mint / Dark Teal

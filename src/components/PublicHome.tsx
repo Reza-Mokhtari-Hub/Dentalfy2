@@ -237,8 +237,8 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
           
           <div className="flex items-center gap-3 md:gap-4 group cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-10 h-10 sm:w-11 sm:h-11 bg-linear-to-br from-teal-500 to-emerald-600 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/25 group-hover:scale-105 transition-transform duration-300">
-              <Shield className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-white" />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/20 group-hover:scale-105 transition-transform duration-300 overflow-hidden bg-slate-900 border border-teal-500/30">
+              <img src="/logo.svg" alt="Dentalfy Academy DA Logo" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "/logo.png"; }} />
             </div>
             <div className="flex flex-col">
               <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-800 dark:text-white leading-none">
@@ -877,13 +877,13 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 mb-12">
             <div className="space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden bg-slate-900 border border-teal-500/30">
+                  <img src="/logo.svg" alt="Dentalfy Academy DA Logo" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = "/logo.png"; }} />
                 </div>
                 <span className="text-2xl font-black text-slate-800 dark:text-white">{settings.siteName || "Dentalfy"}</span>
               </div>
               <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-sm">
-                پلتفرمی تحت وب برای یکپارچه‌سازی فرآیندهای آموزشی رفرنس دندانپزشکی و دسترسی به محتوای بالینی بازنگری‌شده.
+                {settings.footerText || "پلتفرمی تحت وب برای یکپارچه‌سازی فرآیندهای آموزشی رفرنس دندانپزشکی و دسترسی به محتوای بالینی بازنگری‌شده."}
               </p>
             </div>
             
@@ -898,11 +898,32 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
 
             <div>
               <h4 className="font-bold text-slate-900 dark:text-white mb-6">ارتباط با آکادمی</h4>
-              <ul className="space-y-4">
-                <li className="text-sm text-slate-500 dark:text-slate-400 font-mono">info@dentalfy.local</li>
-                <li className="text-sm text-slate-500 dark:text-slate-400 font-mono">admin@dentalfy.local</li>
+              <ul className="space-y-3">
+                {settings.contactEmail && (
+                  <li className="text-sm text-slate-500 dark:text-slate-400 font-mono flex items-center gap-2">
+                    <span className="text-[11px] font-sans font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded">پشتیبانی:</span>
+                    <a href={`mailto:${settings.contactEmail}`} className="hover:text-teal-600 transition-colors">{settings.contactEmail}</a>
+                  </li>
+                )}
+                {settings.adminEmail && (
+                  <li className="text-sm text-slate-500 dark:text-slate-400 font-mono flex items-center gap-2">
+                    <span className="text-[11px] font-sans font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded">مدیریت:</span>
+                    <a href={`mailto:${settings.adminEmail}`} className="hover:text-teal-600 transition-colors">{settings.adminEmail}</a>
+                  </li>
+                )}
+                {settings.contactPhone && (
+                  <li className="text-sm text-slate-500 dark:text-slate-400 font-sans flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/60 px-2 py-0.5 rounded">تلفن:</span>
+                    <span dir="ltr">{settings.contactPhone}</span>
+                  </li>
+                )}
+                {settings.address && (
+                  <li className="text-xs text-slate-500 dark:text-slate-400 font-sans leading-relaxed pt-1">
+                    📍 {settings.address}
+                  </li>
+                )}
                 <li>
-                  <button onClick={onGoToPanel} className="mt-4 text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer">
+                  <button onClick={onGoToPanel} className="mt-2 text-sm font-bold text-teal-600 dark:text-teal-400 hover:underline cursor-pointer">
                     ورود به پنل مدیریت
                   </button>
                 </li>
@@ -912,7 +933,7 @@ export function PublicHome({ settings, courses, posts, onSelectPost, onGoToPanel
 
           <div className="pt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-wider">
-              Powered by RMO © {new Date().getFullYear()} • Clinical Learning Network
+              {settings.siteName || "Dentalfy"} © {new Date().getFullYear()} • Clinical Learning Network
             </p>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-400 dark:text-slate-500">
               <span className="relative flex h-2 w-2 mr-2">

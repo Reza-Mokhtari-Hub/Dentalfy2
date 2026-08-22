@@ -26,7 +26,11 @@ export default function App() {
   const [settings, setSettings] = useState<ISiteSettings>({
     siteName: "dentalfy",
     heroText: "آکادمی آموزش تخصصی دندانپزشکی",
-    contactEmail: "info@dentalfy.local",
+    contactEmail: "dentalfyweb@gmail.com",
+    adminEmail: "dentalfyweb@gmail.com",
+    contactPhone: "",
+    address: "",
+    footerText: "پلتفرمی تحت وب برای یکپارچه‌سازی فرآیندهای آموزشی رفرنس دندانپزشکی و دسترسی به محتوای بالینی بازنگری‌شده.",
     colorTheme: {
       primary: "#14b8a6",
       secondary: "#0d9488",
@@ -34,9 +38,9 @@ export default function App() {
     },
     adminRecoveryCode: "rmo-recover-2026",
     stats: {
-      coursesCount: 3,
-      postsCount: 2,
-      authorsCount: 1
+      coursesCount: 0,
+      postsCount: 0,
+      authorsCount: 0
     }
   });
   const [courses, setCourses] = useState<ICourse[]>([]);
@@ -114,13 +118,29 @@ export default function App() {
     const storedSession = localStorage.getItem("dentalfy_session");
     if (storedSession) {
       try {
-        const userObj = JSON.parse(storedSession);
+        let userObj = JSON.parse(storedSession);
+        if (userObj.email === "admin@rmo.local") {
+          userObj.email = "dentalfyweb@gmail.com";
+        }
+        if (userObj.name === "مدیر سایت (RMO)") {
+          userObj.name = "مدیر سایت (Dentalfy)";
+        }
+        localStorage.setItem("dentalfy_session", JSON.stringify(userObj));
         setCurrentUser(userObj);
       } catch (err) {
         localStorage.removeItem("dentalfy_session");
       }
     }
   }, []);
+
+  const handleUpdateCurrentUser = (updated: Partial<IUser>) => {
+    setCurrentUser(prev => {
+      if (!prev) return prev;
+      const merged = { ...prev, ...updated };
+      localStorage.setItem("dentalfy_session", JSON.stringify(merged));
+      return merged;
+    });
+  };
 
   // Handle Login Authentication
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -345,6 +365,7 @@ export default function App() {
                 posts={posts}
                 onLogout={handleLogout}
                 onRefreshData={fetchInitialData}
+                onUpdateCurrentUser={handleUpdateCurrentUser}
               />
             ) : (
               <PanelDashboard 
@@ -354,6 +375,7 @@ export default function App() {
                 posts={posts}
                 onLogout={handleLogout}
                 onRefreshData={fetchInitialData}
+                onUpdateCurrentUser={handleUpdateCurrentUser}
               />
             )
           ) : (
@@ -738,7 +760,7 @@ export default function App() {
 
                       <div className="space-y-6">
                         <div className="space-y-2">
-                          <label className="text-[11px] font-black text-slate-500 mr-2">ایمیل سازمانی (RMO)</label>
+                          <label className="text-[11px] font-black text-slate-500 mr-2">ایمیل سازمانی (Dentalfy)</label>
                           <input 
                             type="email" 
                             value={loginEmail}

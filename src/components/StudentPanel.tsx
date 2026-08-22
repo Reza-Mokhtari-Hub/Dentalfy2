@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { IUser, ICourse, IPost, ISiteSettings, IReview, IQna, IQuiz, INotification, ILibraryDoc, IComment } from "../types";
+import { ClinicalHtmlRenderer } from "./ClinicalHtmlRenderer";
 
 interface StudentPanelProps {
   currentUser: IUser;
@@ -15,9 +16,10 @@ interface StudentPanelProps {
   posts: IPost[];
   onLogout: () => void;
   onRefreshData: () => void;
+  onUpdateCurrentUser?: (user: Partial<IUser>) => void;
 }
 
-export function StudentPanel({ currentUser, settings, courses, posts, onLogout, onRefreshData }: StudentPanelProps) {
+export function StudentPanel({ currentUser, settings, courses, posts, onLogout, onRefreshData, onUpdateCurrentUser }: StudentPanelProps) {
   // Navigation & Tab States
   const [activeTab, setActiveTab] = useState<"dashboard" | "courses" | "bookmarks" | "history" | "profile" | "library">("dashboard");
   const [selectedCourse, setSelectedCourse] = useState<ICourse | null>(null);
@@ -502,14 +504,17 @@ export function StudentPanel({ currentUser, settings, courses, posts, onLogout, 
           profilePicture: profilePic
         })
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.success) {
         setProfileSuccessMsg("اطلاعات حساب دکتری / دانشجویی شما با موفقیت در دیتابیس بروزرسانی شد.");
         setOldPassword("");
         setNewPassword("");
         setConfirmPassword("");
+        if (data.user && onUpdateCurrentUser) {
+          onUpdateCurrentUser(data.user);
+        }
         onRefreshData();
       } else {
-        const data = await res.json();
         showToast(data.error || "خطا در ویرایش پروفایل.");
       }
     } catch (err) {
@@ -834,6 +839,11 @@ export function StudentPanel({ currentUser, settings, courses, posts, onLogout, 
                         <div className="my-4 aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-black">
                           <iframe src={block.value?.url || block.value} className="w-full h-full" frameBorder="0" allowFullScreen></iframe>
                         </div>
+                      )}
+                      {block.type === "html" && (
+                        <ClinicalHtmlRenderer 
+                          htmlCode={typeof block.value === 'object' ? (block.value?.code || block.value?.text || '') : (block.value || '')}
+                        />
                       )}
                     </div>
                   ))}

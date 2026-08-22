@@ -36,7 +36,7 @@ export interface ICourse {
 
 export interface IBlock {
   id: string;
-  type: "text" | "heading" | "image" | "video" | "pdf" | "quote" | "list" | "divider";
+  type: "text" | "heading" | "image" | "video" | "pdf" | "quote" | "list" | "divider" | "html" | "quiz";
   value: any; // Stored block-specific values
 }
 
@@ -75,6 +75,10 @@ export interface ISiteSettings {
   siteName: string;
   heroText: string;
   contactEmail: string;
+  adminEmail?: string;
+  contactPhone?: string;
+  address?: string;
+  footerText?: string;
   colorTheme: {
     primary: string;
     secondary: string;

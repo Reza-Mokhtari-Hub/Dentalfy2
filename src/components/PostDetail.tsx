@@ -1,6 +1,92 @@
 import React, { useState, useEffect } from "react";
-import { ArrowRight, Calendar, BookOpen, Quote, Download, FileText, Play, MessageSquare, Send, CornerDownLeft } from "lucide-react";
+import { ArrowRight, Calendar, BookOpen, Quote, Download, FileText, Play, MessageSquare, Send, CornerDownLeft, HelpCircle, CheckCircle2, XCircle } from "lucide-react";
 import { IPost, IComment } from "../types";
+import { ClinicalHtmlRenderer } from "./ClinicalHtmlRenderer";
+
+function InteractivePostQuiz({ quizVal }: { quizVal: any; key?: string }) {
+  const [selectedOpt, setSelectedOpt] = useState<number | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const question = quizVal?.question || quizVal?.questionText || "سوال خودآزمایی بالینی";
+  const options = Array.isArray(quizVal?.options) ? quizVal.options : ["گزینه ۱", "گزینه ۲", "گزینه ۳", "گزینه ۴"];
+  const correctIdx = typeof quizVal?.correctAnswer === "number" ? quizVal.correctAnswer : (typeof quizVal?.correctAnswerIndex === "number" ? quizVal.correctAnswerIndex : 0);
+  const explanation = quizVal?.explanation || "";
+
+  return (
+    <div className="my-6 p-5 bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl space-y-4" dir="rtl">
+      <div className="flex items-center gap-2 text-teal-400 text-xs font-black">
+        <HelpCircle className="w-4 h-4 text-teal-400" />
+        خودآزمایی بالینی مقاله (تست یادگیری)
+      </div>
+      <h4 className="text-xs md:text-sm font-extrabold text-slate-100 leading-relaxed">
+        {question}
+      </h4>
+      <div className="space-y-2">
+        {options.map((opt: string, idx: number) => {
+          let btnStyle = "bg-slate-800/80 border-slate-700/80 text-slate-200 hover:bg-slate-800";
+          if (submitted) {
+            if (idx === correctIdx) {
+              btnStyle = "bg-emerald-950/80 border-emerald-500/80 text-emerald-200 font-bold";
+            } else if (idx === selectedOpt) {
+              btnStyle = "bg-rose-950/80 border-rose-500/80 text-rose-200";
+            } else {
+              btnStyle = "bg-slate-800/40 border-slate-800 text-slate-500 opacity-60";
+            }
+          } else if (selectedOpt === idx) {
+            btnStyle = "bg-teal-900/60 border-teal-500 text-teal-200 font-bold";
+          }
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              disabled={submitted}
+              onClick={() => setSelectedOpt(idx)}
+              className={`w-full p-3 rounded-xl border text-xs text-right transition-all flex items-center justify-between cursor-pointer ${btnStyle}`}
+            >
+              <span>{opt}</span>
+              <span className="w-5 h-5 rounded-full border border-slate-600 flex items-center justify-center font-mono text-[10px] shrink-0 mr-2">
+                {idx + 1}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {!submitted ? (
+        <button
+          type="button"
+          disabled={selectedOpt === null}
+          onClick={() => setSubmitted(true)}
+          className="w-full py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-xs font-black rounded-xl transition-all shadow-md shadow-teal-600/20 cursor-pointer"
+        >
+          ثبت و بررسی پاسخ
+        </button>
+      ) : (
+        <div className="pt-2 border-t border-slate-800 space-y-2">
+          <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${selectedOpt === correctIdx ? "bg-emerald-900/30 text-emerald-300 border border-emerald-500/30" : "bg-rose-900/30 text-rose-300 border border-rose-500/30"}`}>
+            {selectedOpt === correctIdx ? (
+              <>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                پاسخ شما کاملاً صحیح است!
+              </>
+            ) : (
+              <>
+                <XCircle className="w-4 h-4 text-rose-400" />
+                پاسخ نادرست است. گزینه {correctIdx + 1} صحیح می‌باشد.
+              </>
+            )}
+          </div>
+          {explanation && (
+            <p className="text-[11px] text-slate-300 bg-slate-800/50 p-3 rounded-xl leading-relaxed">
+              💡 <span className="font-bold text-teal-400">تحلیل علمی:</span> {explanation}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface PostDetailProps {
   post: IPost;
@@ -257,6 +343,22 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                       </div>
                     );
 
+                  case "html": {
+                    const hCode = typeof block.value === "object" ? (block.value?.code || block.value?.text || "") : (block.value || "");
+                    return (
+                      <ClinicalHtmlRenderer 
+                        key={block.id} 
+                        htmlCode={hCode} 
+                      />
+                    );
+                  }
+
+                  case "quiz": {
+                    return (
+                      <InteractivePostQuiz key={block.id} quizVal={block.value} />
+                    );
+                  }
+
                   default:
                     return null;
                 }
@@ -367,7 +469,7 @@ export function PostDetail({ post, onBack }: PostDetailProps) {
                     </div>
                     {comment.role !== "public" && (
                       <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-teal-100 text-teal-700">
-                        {comment.role === "admin" ? "مدیر علمی RMO" : "نویسنده مقاله"}
+                        {comment.role === "admin" ? "مدیر علمی آکادمی" : "نویسنده مقاله"}
                       </span>
                     )}
                   </div>
