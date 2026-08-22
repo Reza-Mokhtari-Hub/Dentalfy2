@@ -3434,6 +3434,20 @@ export async function startServer() {
 
 
   // --- AUTOMATED SITEMAP & RSS FEEDS ---
+  app.get("/robots.txt", (req, res) => {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.get("host") || "dentalfy.academy";
+    const baseUrl = `${protocol}://${host}`;
+
+    res.setHeader("Content-Type", "text/plain");
+    res.send(`User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: ${baseUrl}/sitemap.xml
+`);
+  });
+
   app.get("/sitemap.xml", async (req, res) => {
     try {
       let posts = [];
@@ -3446,24 +3460,37 @@ export async function startServer() {
         courses = memoryDB.courses;
       }
 
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.get("host") || "dentalfy.academy";
+      const baseUrl = `${protocol}://${host}`;
+
+      const formatDate = (dateInput: any) => {
+        if (!dateInput) return new Date().toISOString().split('T')[0];
+        try {
+          return new Date(dateInput).toISOString().split('T')[0];
+        } catch (e) {
+          return new Date().toISOString().split('T')[0];
+        }
+      };
+
       res.setHeader("Content-Type", "application/xml");
 
       let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
       xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
 
       // Main Pages
-      xml += `  <url><loc>https://dentalfy.local/</loc><priority>1.0</priority></url>\n`;
-      xml += `  <url><loc>https://dentalfy.local/courses</loc><priority>0.8</priority></url>\n`;
-      xml += `  <url><loc>https://dentalfy.local/library</loc><priority>0.7</priority></url>\n`;
+      xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${formatDate(new Date())}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>${baseUrl}/courses</loc>\n    <lastmod>${formatDate(new Date())}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.9</priority>\n  </url>\n`;
+      xml += `  <url>\n    <loc>${baseUrl}/library</loc>\n    <lastmod>${formatDate(new Date())}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
 
       // Courses
       courses.forEach(c => {
-        xml += `  <url><loc>https://dentalfy.local/courses/${c._id}</loc><priority>0.7</priority></url>\n`;
+        xml += `  <url>\n    <loc>${baseUrl}/courses/${c._id}</loc>\n    <lastmod>${formatDate(c.updatedAt || c.createdAt)}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
       });
 
       // Posts
       posts.forEach(p => {
-        xml += `  <url><loc>https://dentalfy.local/blog/${p._id}</loc><priority>0.6</priority></url>\n`;
+        xml += `  <url>\n    <loc>${baseUrl}/blog/${p._id}</loc>\n    <lastmod>${formatDate(p.updatedAt || p.createdAt)}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
       });
 
       xml += `</urlset>`;
@@ -3482,20 +3509,24 @@ export async function startServer() {
         posts = memoryDB.posts.filter(p => p.status === "published");
       }
 
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      const host = req.get("host") || "dentalfy.academy";
+      const baseUrl = `${protocol}://${host}`;
+
       res.setHeader("Content-Type", "application/xml");
 
       let xml = `<?xml version="1.0" encoding="UTF-8" ?>\n`;
       xml += `<rss version="2.0">\n`;
       xml += `<channel>\n`;
       xml += `  <title>آکادمی آموزش دندانپزشکی دنتالفای</title>\n`;
-      xml += `  <link>https://dentalfy.local</link>\n`;
+      xml += `  <link>${baseUrl}</link>\n`;
       xml += `  <description>آخرین مقالات، فایل‌های روتاری، جراحی و اصول ادهزیو در دندانپزشکی</description>\n`;
 
       posts.forEach(p => {
         const authorName = typeof p.author === "object" ? p.author.name : "دنتالفای";
         xml += `  <item>\n`;
         xml += `    <title>${p.title}</title>\n`;
-        xml += `    <link>https://dentalfy.local/blog/${p._id}</link>\n`;
+        xml += `    <link>${baseUrl}/blog/${p._id}</link>\n`;
         xml += `    <description>${p.summary || ""}</description>\n`;
         xml += `    <author>${authorName}</author>\n`;
         xml += `    <pubDate>${p.createdAt ? new Date(p.createdAt).toUTCString() : new Date().toUTCString()}</pubDate>\n`;
