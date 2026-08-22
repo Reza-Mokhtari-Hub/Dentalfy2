@@ -343,14 +343,30 @@ export default function App() {
         />
       )}
 
-      {activeView === "post" && selectedPost && (
-        <PostDetail 
-          post={selectedPost}
-          onBack={() => {
-            setSelectedPost(null);
-            setActiveView("home");
-          }}
-        />
+      {activeView === "post" && (
+        selectedPost ? (
+          <PostDetail 
+            post={selectedPost}
+            onBack={() => {
+              setSelectedPost(null);
+              setActiveView("home");
+            }}
+          />
+        ) : (
+          <PublicHome 
+            settings={settings}
+            courses={courses}
+            posts={posts}
+            onSelectPost={(post) => {
+              setSelectedPost(post);
+              setActiveView("post");
+            }}
+            onGoToPanel={() => setActiveView("panel")}
+            onRegisterAuthor={() => { setIsStudentMode(false); setIsRegisterMode(true); setRegisterRole("author"); setActiveView("panel"); }}
+            onStudentLogin={() => { setIsStudentMode(true); setIsRegisterMode(false); setActiveView("panel"); }}
+            onStudentRegister={() => { setIsStudentMode(true); setIsRegisterMode(true); setRegisterRole("student"); setActiveView("panel"); }}
+          />
+        )
       )}
 
       {activeView === "panel" && (

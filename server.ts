@@ -436,6 +436,150 @@ export async function startServer() {
   ];
   memoryDB.faqs.push(...defaultFAQs);
 
+  const defaultPosts = [
+    {
+      _id: "mem-post-1",
+      title: "پروتکل جامع آماده‌سازی و تراش لمینت‌های سرامیکی محافظه‌کارانه",
+      status: "published",
+      author: "mem-admin-id",
+      course: "mem-course-1",
+      summary: "بررسی مرحله به مرحله تکنیک‌های تراش مینایی، هدایت با سیلیکون ایندکس و متدهای سمان‌کردن ادهزیو در ونیرهای پرسلنی.",
+      content: [
+        {
+          id: "b-1",
+          type: "heading",
+          value: { text: "مقدمه و فلسفه دندانپزشکی کم‌تهاجمی (Minimally Invasive)", level: "h2" }
+        },
+        {
+          id: "b-2",
+          type: "text",
+          value: "در دندانپزشکی زیبایی مدرن، حفظ حداکثری بافت مینای دندان مهم‌ترین فاکتور تضمین‌کننده باندینگ پایدار لمینت‌های سرامیکی است. پیوند رزین به مینای دندان به مراتب قوی‌تر و بادوام‌تر از عاج است؛ بنابراین کاهش ضخامت تراش به ۰.۳ تا ۰.۵ میلی‌متر در سطح باکال اولویت اساسی دارد."
+        },
+        {
+          id: "b-3",
+          type: "quote",
+          value: { text: "حفظ حداقل ۷۰ درصد ساختار مینای دندان ضامن موفقیت درازمدت ونیرهای سرامیکی فلدسپاتیک و لیتیوم دی‌سیلیکات است.", author: "هیئت علمی آکادمی دنتالفای" }
+        },
+        {
+          id: "b-4",
+          type: "heading",
+          value: { text: "مراحل کلینیکی تراش محافظه‌کارانه", level: "h3" }
+        },
+        {
+          id: "b-5",
+          type: "list",
+          value: {
+            items: [
+              "ساخت موک‌آپ تشخیصی با رزین بیس‌اکریل بر روی مدل مطالعه",
+              "ایجاد شیارهای راهنمای عمق تراش (Depth Grooves) بر روی سطح موک‌آپ",
+              "یکدست کردن تراش فاسیال با فرزهای روند اند تیپر و حفظ خط تراش چامفر",
+              "تراش لبه اینسایزال به میزان ۱.۵ میلی‌متر جهت ایجاد جلوه ترنسلوسنسی طبیعی",
+              "پک کردن نخ زیر لثه‌ای سایز 000 جهت بازبینی مارجین ساب‌جینجیوال"
+            ],
+            listType: "ordered"
+          }
+        },
+        {
+          id: "b-6",
+          type: "quiz",
+          value: {
+            question: "هدف اصلی از ایجاد شیارهای عمق تراش (Depth Cuts) بر روی موک‌آپ تشخیصی چیست؟",
+            options: [
+              "جلوگیری از تراش بی‌رویه مینا و تطابق کامل با آناتومی نهایی ونیر",
+              "سرعت بخشیدن به فرآیند قالبگیری",
+              "بی‌حسی موضعی بهتر لثه",
+              "حذف کامل مینای سرویکال"
+            ],
+            correctAnswer: 0,
+            explanation: "تراش از روی موک‌آپ باعث می‌شود تنها به اندازه‌ای که برای ضخامت سرامیک لازم است تراش انجام شود و از اور-پریپاریشن غیرضروری در مناطقی که دندان لینگوال‌تر است جلوگیری گردد."
+          }
+        }
+      ],
+      createdAt: new Date()
+    },
+    {
+      _id: "mem-post-2",
+      title: "استراتژی‌های نوین یافتن و پاکسازی کانال MB2 در مولرهای اول ماگزیلا",
+      status: "published",
+      author: "mem-admin-id",
+      course: "mem-course-2",
+      summary: "راهنمای کلینیکی کشف کانال مزیوباکال دوم (MB2)، استفاده از لوپ‌های بزرگنمایی و تکنیک‌های شستشوی فعال اندودنتیک.",
+      content: [
+        {
+          id: "b-201",
+          type: "heading",
+          value: { text: "آناتومی پیچیده و شیوع کانال دوم مزیوباکال", level: "h2" }
+        },
+        {
+          id: "b-202",
+          type: "text",
+          value: "تحقیقات آناتومیک نشان می‌دهد کانال MB2 در بیش از ۸۵ درصد از مولرهای اول فک بالا وجود دارد. عدم درمان مناسب این کانال یکی از شایع‌ترین علل شکست درمان ریشه و بروز پری‌آپیکال لژن‌های مقاوم به درمان است."
+        },
+        {
+          id: "b-203",
+          type: "heading",
+          value: { text: "نقشه راه کلینیکی برای لوکالیزه کردن MB2", level: "h3" }
+        },
+        {
+          id: "b-204",
+          type: "list",
+          value: {
+            items: [
+              "بهبود اکسس کویتی به شکل ذوزنقه‌ای متمایل به پالاتال",
+              "استفاده از تیپ‌های اولتراسونیک با روکش دیاموند جهت حذف طاقچه عاجی (Dentin Bridge)",
+              "جستجو در خط اتصال کانال MB1 به سمت پالاتال به فاصله ۱ تا ۳ میلی‌متری",
+              "تست حباب شامپاین با سدیم هیپوکلریت ۵.۲۵٪ تحت بزرگنمایی میکروسکوپ یا لوپ ۴ برابر"
+            ],
+            listType: "ordered"
+          }
+        },
+        {
+          id: "b-205",
+          type: "quiz",
+          value: {
+            question: "کانال MB2 در مولر اول فک بالا نسبت به کانال اصلی MB1 معمولاً در چه موقعیتی قرار دارد؟",
+            options: [
+              "۱ تا ۳ میلی‌متر به سمت پالاتال و کمی مزیال‌تر",
+              "در مجاورت مستقیم کانال دیستوباکال",
+              "در مرکز اتاق پالپ",
+              "دقیقاً در زیر کاسپ کارابلی"
+            ],
+            correctAnswer: 0,
+            explanation: "اریفیس کانال MB2 همواره روی خطی قرار دارد که MB1 را به کانال پالاتال متصل می‌کند و معمولاً ۱ تا ۳ میلی‌متر متمایل به سمت پالاتال در زیر یک طاقچه عاجی پنهان است."
+          }
+        }
+      ],
+      createdAt: new Date()
+    },
+    {
+      _id: "mem-post-3",
+      title: "ارزیابی بیومکانیک و معیارهای ثبات اولیه در ایمپلنت‌های Immediate Loading",
+      status: "published",
+      author: "mem-admin-id",
+      course: "mem-course-3",
+      summary: "معیارهای تورک جایگذاری، آنالیز فرکانس تشدید (ISQ) و پروتکل‌های بارگذاری فوری در استخوان‌های تیپ ۳ و ۴.",
+      content: [
+        {
+          id: "b-301",
+          type: "heading",
+          value: { text: "اصول بیومکانیک و شاخص‌های موفقیت بارگذاری فوری", level: "h2" }
+        },
+        {
+          id: "b-302",
+          type: "text",
+          value: "بارگذاری فوری ایمپلنت دندانی نیازمند دستیابی به ثبات اولیه (Primary Stability) بالا به منظور جلوگیری از ریزحرکات (Micromovements) بیش از ۱۵۰ میکرون در فاز استئواینتگریشن است."
+        },
+        {
+          id: "b-303",
+          type: "quote",
+          value: { text: "حداقل گشتاور جایگذاری (Insertion Torque) برای لودینگ فوری ۳۵ الی ۴۵ نیوتن‌سانتی‌متر و عدد ISQ بالای ۶۵ پیشنهاد می‌شود.", author: "بخش جراحی فک و صورت دنتالفای" }
+        }
+      ],
+      createdAt: new Date()
+    }
+  ];
+  memoryDB.posts.push(...defaultPosts);
+
   // --- CONNECT MONGO DB OR FALLBACK TO MEMORY ---
   try {
     if (process.env.MONGODB_URI) {
@@ -561,6 +705,24 @@ export async function startServer() {
         if (!catExists) {
           await Category.create(cat);
           console.log(`🌱 Seeded Default Category: "${cat.name}" (${cat.slug})`);
+        }
+      }
+
+      // Seed initial posts in MongoDB if none exist
+      const postsCount = await Post.countDocuments();
+      if (postsCount === 0 && adminUser && dbCourses.length > 0) {
+        for (let i = 0; i < defaultPosts.length; i++) {
+          const dp = defaultPosts[i];
+          const matchedCourse = dbCourses[i % dbCourses.length];
+          await Post.create({
+            title: dp.title,
+            status: "published",
+            author: adminUser._id,
+            course: matchedCourse._id,
+            summary: dp.summary,
+            content: dp.content
+          });
+          console.log(`🌱 Seeded Default Post in MongoDB: "${dp.title}"`);
         }
       }
 

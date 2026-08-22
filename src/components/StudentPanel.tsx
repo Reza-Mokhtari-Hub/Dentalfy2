@@ -21,9 +21,10 @@ interface StudentPanelProps {
 
 export function StudentPanel({ currentUser, settings, courses, posts, onLogout, onRefreshData, onUpdateCurrentUser }: StudentPanelProps) {
   // Navigation & Tab States
-  const [activeTab, setActiveTab] = useState<"dashboard" | "courses" | "bookmarks" | "history" | "profile" | "library">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "courses" | "articles" | "bookmarks" | "history" | "profile" | "library">("dashboard");
   const [selectedCourse, setSelectedCourse] = useState<ICourse | null>(null);
   const [selectedPost, setSelectedPost] = useState<IPost | null>(null);
+  const [articleSearch, setArticleSearch] = useState<string>("");
   const [customConfirm, setCustomConfirm] = useState<{
     title: string;
     message: string;
@@ -613,6 +614,15 @@ export function StudentPanel({ currentUser, settings, courses, posts, onLogout, 
             >
               <BookOpen className={`w-5 h-5 ${activeTab === "courses" || selectedCourse ? "text-white" : "group-hover:scale-110 transition-transform"}`} /> 
               دروس و دوره‌های من
+            </button>
+
+            <button 
+              onClick={() => { setActiveTab("articles"); setSelectedCourse(null); setSelectedPost(null); setIsMobileSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3.5 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 cursor-pointer group ${activeTab === "articles" ? "bg-teal-600 text-white shadow-lg shadow-teal-600/20" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-teal-600"}`}
+            >
+              <FileText className={`w-5 h-5 ${activeTab === "articles" ? "text-white" : "group-hover:scale-110 transition-transform"}`} /> 
+              آرشیو مقالات و مباحث
+              <span className={`mr-auto text-[10px] px-2 py-0.5 rounded-full font-bold ${activeTab === "articles" ? "bg-white/20 text-white" : "bg-slate-100 dark:bg-slate-900 text-slate-500"}`}>{(posts || []).length}</span>
             </button>
 
             <div className="px-3 mt-8 mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">کتابخانه شخصی</div>
@@ -1482,6 +1492,88 @@ export function StudentPanel({ currentUser, settings, courses, posts, onLogout, 
                   );
                 })}
               </div>
+            </div>
+          ) : activeTab === "articles" ? (
+            /* --- ALL ARTICLES SEARCH & BROWSE TAB --- */
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-right">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-xs text-slate-800 dark:text-slate-100 border-r-4 border-teal-500 pr-2">آرشیو جامع مقالات و دروس بالینی</h3>
+                  <p className="text-slate-400 text-[10px] font-medium">دسترسی مستقیم به تمامی مقالات تألیف‌شده توسط هیئت علمی و اساتید دنتالفای.</p>
+                </div>
+                <div className="w-full md:w-72 relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute right-3 top-3" />
+                  <input 
+                    type="text" 
+                    value={articleSearch} 
+                    onChange={(e) => setArticleSearch(e.target.value)} 
+                    placeholder="جستجو در عناوین و مباحث مقالات..."
+                    className="w-full pl-4 pr-9 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-teal-500 text-slate-700 dark:text-slate-200 font-medium"
+                  />
+                </div>
+              </div>
+
+              {(() => {
+                const filteredAllPosts = (posts || []).filter(p => {
+                  if (!articleSearch.trim()) return true;
+                  const q = articleSearch.toLowerCase();
+                  return (
+                    p.title?.toLowerCase().includes(q) ||
+                    p.summary?.toLowerCase().includes(q) ||
+                    (typeof p.course === "object" && p.course?.title?.toLowerCase().includes(q))
+                  );
+                });
+
+                if (filteredAllPosts.length === 0) {
+                  return (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-16 text-center shadow-sm">
+                      <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                      <h4 className="font-bold text-slate-600 dark:text-slate-300 text-xs">مقاله‌ای یافت نشد</h4>
+                      <p className="text-slate-400 text-[10px] mt-1 font-medium">با تغییر عبارت جستجو می‌توانید مقالات دیگر را بیابید.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredAllPosts.map((post) => {
+                      const cTitle = typeof post.course === "object" ? post.course?.title : "مباحث آزاد بالینی";
+                      const aName = typeof post.author === "object" ? post.author?.name : "اساتید آکادمی";
+                      const isCompleted = completedLessons.includes(post._id);
+
+                      return (
+                        <div 
+                          key={post._id}
+                          onClick={() => { setSelectedPost(post); handleAddToHistory(post._id, post.title); }}
+                          className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 space-y-3 cursor-pointer hover:border-teal-500/40 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group"
+                        >
+                          <div className="space-y-2 text-right">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[8px] font-bold text-teal-600 bg-teal-50 dark:bg-teal-900/20 px-2 py-0.5 rounded truncate max-w-[150px]">
+                                {cTitle}
+                              </span>
+                              {isCompleted && (
+                                <span className="text-[8px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-0.5">
+                                  <CheckCircle className="w-3 h-3" /> خوانده شده
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-extrabold text-sm text-slate-800 dark:text-white group-hover:text-teal-600 transition-colors line-clamp-2 leading-relaxed">{post.title}</h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 font-medium leading-relaxed">
+                              {post.summary || "مطالعه متن کامل مقاله بالینی و گزارش درمان..."}
+                            </p>
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-50 dark:border-slate-700/50 flex justify-between items-center text-[10px] font-bold text-slate-500">
+                            <span className="text-teal-600 flex items-center gap-1 group-hover:translate-x-[-4px] transition-transform">مطالعه مقاله ←</span>
+                            <span className="text-[9px] text-slate-400 font-medium">{aName}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           ) : activeTab === "bookmarks" ? (
             /* --- BOOKMARKS CATALOGUE TAB --- */
