@@ -2,6 +2,18 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/vercel"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/vercel"
+    },
+    {
+      "source": "/rss.xml",
+      "destination": "/api/vercel"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/vercel"
     },
