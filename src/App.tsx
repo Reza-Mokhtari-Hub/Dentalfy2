@@ -256,7 +256,7 @@ export default function App() {
         setIsOtpSent(false);
         setSimulatedOtpCode(null);
       } else {
-        setOtpError(data.error || "خطا در {registerRole === 'author' ? 'ثبت نام نویسنده' : 'ثبت نام دانشجو'}");
+        setOtpError(data.error || `خطا در ${registerRole === 'author' ? 'ثبت نام نویسنده' : 'ثبت نام دانشجو'}`);
       }
     } catch (err) {
       setOtpError("خطا در ثبت نام. لطفاً مجدداً بررسی کنید.");

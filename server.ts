@@ -3817,6 +3817,17 @@ Sitemap: ${baseUrl}/sitemap.xml
     }
   });
 
+  // Global API Error Handling Middleware
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error("🔥 Unhandled Server Error:", err);
+    if (res.headersSent) {
+      return next(err);
+    }
+    return res.status(err.status || 500).json({
+      error: err.message || "خطای سرور داخلی رخ داده است.",
+      success: false
+    });
+  });
 
   // --- VITE INTERFACE / FRONTEND BUNDLING ---
 
