@@ -3449,6 +3449,10 @@ Sitemap: ${baseUrl}/sitemap.xml
   });
 
   app.get("/sitemap.xml", async (req, res) => {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.get("host") || "dentalfy.academy";
+    const baseUrl = `${protocol}://${host}`;
+
     try {
       let posts = [];
       let courses = [];
@@ -3460,10 +3464,6 @@ Sitemap: ${baseUrl}/sitemap.xml
         courses = memoryDB.courses;
       }
 
-      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-      const host = req.get("host") || "dentalfy.academy";
-      const baseUrl = `${protocol}://${host}`;
-
       const formatDate = (dateInput: any) => {
         if (!dateInput) return new Date().toISOString().split('T')[0];
         try {
@@ -3473,7 +3473,7 @@ Sitemap: ${baseUrl}/sitemap.xml
         }
       };
 
-      res.setHeader("Content-Type", "application/xml");
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
 
       let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
       xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
@@ -3485,22 +3485,36 @@ Sitemap: ${baseUrl}/sitemap.xml
 
       // Courses
       courses.forEach(c => {
-        xml += `  <url>\n    <loc>${baseUrl}/courses/${c._id}</loc>\n    <lastmod>${formatDate(c.updatedAt || c.createdAt)}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+        if (c && c._id) {
+          xml += `  <url>\n    <loc>${baseUrl}/courses/${c._id}</loc>\n    <lastmod>${formatDate(c.updatedAt || c.createdAt)}</lastmod>\n    <changefreq>weekly</changefreq>\n    <priority>0.8</priority>\n  </url>\n`;
+        }
       });
 
       // Posts
       posts.forEach(p => {
-        xml += `  <url>\n    <loc>${baseUrl}/blog/${p._id}</loc>\n    <lastmod>${formatDate(p.updatedAt || p.createdAt)}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+        if (p && p._id) {
+          xml += `  <url>\n    <loc>${baseUrl}/blog/${p._id}</loc>\n    <lastmod>${formatDate(p.updatedAt || p.createdAt)}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>0.7</priority>\n  </url>\n`;
+        }
       });
 
       xml += `</urlset>`;
       res.send(xml);
     } catch (err: any) {
-      res.status(500).send("Error generating sitemap");
+      console.error("Sitemap generation failed, serving fallback:", err);
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+      xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+      xml += `  <url>\n    <loc>${baseUrl}/</loc>\n    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>\n    <changefreq>daily</changefreq>\n    <priority>1.0</priority>\n  </url>\n`;
+      xml += `</urlset>`;
+      res.send(xml);
     }
   });
 
   app.get("/rss.xml", async (req, res) => {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+    const host = req.get("host") || "dentalfy.academy";
+    const baseUrl = `${protocol}://${host}`;
+
     try {
       let posts: any[] = [];
       if (isDBConnected) {
@@ -3509,11 +3523,17 @@ Sitemap: ${baseUrl}/sitemap.xml
         posts = memoryDB.posts.filter(p => p.status === "published");
       }
 
-      const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
-      const host = req.get("host") || "dentalfy.academy";
-      const baseUrl = `${protocol}://${host}`;
+      const escapeXml = (unsafe: any) => {
+        if (!unsafe) return "";
+        return String(unsafe)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&apos;");
+      };
 
-      res.setHeader("Content-Type", "application/xml");
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
 
       let xml = `<?xml version="1.0" encoding="UTF-8" ?>\n`;
       xml += `<rss version="2.0">\n`;
@@ -3523,21 +3543,39 @@ Sitemap: ${baseUrl}/sitemap.xml
       xml += `  <description>آخرین مقالات، فایل‌های روتاری، جراحی و اصول ادهزیو در دندانپزشکی</description>\n`;
 
       posts.forEach(p => {
-        const authorName = typeof p.author === "object" ? p.author.name : "دنتالفای";
-        xml += `  <item>\n`;
-        xml += `    <title>${p.title}</title>\n`;
-        xml += `    <link>${baseUrl}/blog/${p._id}</link>\n`;
-        xml += `    <description>${p.summary || ""}</description>\n`;
-        xml += `    <author>${authorName}</author>\n`;
-        xml += `    <pubDate>${p.createdAt ? new Date(p.createdAt).toUTCString() : new Date().toUTCString()}</pubDate>\n`;
-        xml += `  </item>\n`;
+        if (p) {
+          let authorName = "دنتالفای";
+          if (p.author && typeof p.author === "object" && p.author.name) {
+            authorName = p.author.name;
+          } else if (p.authorName) {
+            authorName = p.authorName;
+          }
+
+          xml += `  <item>\n`;
+          xml += `    <title>${escapeXml(p.title)}</title>\n`;
+          xml += `    <link>${baseUrl}/blog/${p._id}</link>\n`;
+          xml += `    <description>${escapeXml(p.summary || "")}</description>\n`;
+          xml += `    <author>${escapeXml(authorName)}</author>\n`;
+          xml += `    <pubDate>${p.createdAt ? new Date(p.createdAt).toUTCString() : new Date().toUTCString()}</pubDate>\n`;
+          xml += `  </item>\n`;
+        }
       });
 
       xml += `</channel>\n`;
       xml += `</rss>`;
       res.send(xml);
     } catch (err: any) {
-      res.status(500).send("Error generating RSS feed");
+      console.error("RSS generation failed, serving fallback:", err);
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      let xml = `<?xml version="1.0" encoding="UTF-8" ?>\n`;
+      xml += `<rss version="2.0">\n`;
+      xml += `<channel>\n`;
+      xml += `  <title>آکادمی آموزش دندانپزشکی دنتالفای</title>\n`;
+      xml += `  <link>${baseUrl}</link>\n`;
+      xml += `  <description>آخرین مقالات، فایل‌های روتاری، جراحی و اصول ادهزیو در دندانپزشکی</description>\n`;
+      xml += `</channel>\n`;
+      xml += `</rss>`;
+      res.send(xml);
     }
   });
 
