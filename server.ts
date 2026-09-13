@@ -12,9 +12,11 @@ import {
 const Notification = DBNotification;
 
 const CANDIDATE_GEMINI_MODELS = [
+  "gemini-3.8-flash",
   "gemini-3.7-flash",
+  "gemini-3.1-pro-preview",
   "gemini-flash-latest",
-  "gemini-3.1-pro-preview"
+  "gemini-3.1-flash-lite"
 ];
 
 async function generateWithFallbackModel(ai: any, generateParams: any) {
@@ -150,11 +152,6 @@ export async function startServer() {
 
     { name: "رادیولوژی دهان و فک (CBCT)", parent: null, slug: "oral-radiology" }
   ];
-  memoryDB.categories.push(...defaultCategories.map((c, i) => ({
-    _id: "cat-" + (i + 1),
-    ...c,
-    createdAt: new Date()
-  })));
 
   // Seed default quizzes for courses
   const defaultQuizzes = [
@@ -195,92 +192,6 @@ export async function startServer() {
       createdAt: new Date()
     }
   ];
-  memoryDB.quizzes.push(...defaultQuizzes);
-
-  // Seed default comments with isApproved: true
-  const defaultComments = [
-    {
-      _id: "mem-cmt-seed-1",
-      postId: "mem-post-1",
-      name: "دکتر نیما علوی",
-      role: "public",
-      email: "nima@example.com",
-      text: "بسیار مطلب کاربردی و دقیقی بود. تراش محافظه‌کارانه واقعا کلید بقای باندینگ است.",
-      reply: "ممنون از توجه شما همکار گرامی.",
-      repliedBy: "دکتر زهرا کریمی",
-      isApproved: true,
-      createdAt: new Date()
-    }
-  ];
-  memoryDB.comments.push(...defaultComments);
-
-  // Seed default reviews for courses
-  const defaultReviews = [
-    {
-      _id: "rev-1",
-      courseId: "mem-course-1",
-      studentName: "مریم احمدی (دانشجو)",
-      studentEmail: "maryam@dental.ir",
-      rating: 5,
-      comment: "این دوره فوق‌العاده کاربردی بود، تکنیک‌های عملی تراش را به خوبی یاد گرفتم.",
-      isApproved: true,
-      createdAt: new Date()
-    },
-    {
-      _id: "rev-2",
-      courseId: "mem-course-2",
-      studentName: "علی حسینی (دانشجو)",
-      studentEmail: "ali@dental.ir",
-      rating: 4,
-      comment: "تدریس فایل‌های روتاری بسیار رسا و روان بود. تشکر از آکادمی.",
-      isApproved: true,
-      createdAt: new Date()
-    }
-  ];
-  memoryDB.reviews.push(...defaultReviews);
-
-  // Seed default QnA
-  const defaultQnas = [
-    {
-      _id: "qna-1",
-      courseId: "mem-course-1",
-      studentName: "دکتر سپهر بهرامی",
-      studentEmail: "sepehr@example.com",
-      question: "آیا در دندان‌های وایتال هم می‌توان از این عمق تراش استفاده کرد؟",
-      answer: "بله، در دندان‌های زنده (وایتال) حتماً باید تراش بسیار محافظه‌کارانه و در حد مینا باشد تا حساسیت پس از کار ایجاد نشود.",
-      repliedBy: "دکتر زهرا کریمی",
-      isApproved: true,
-      createdAt: new Date()
-    }
-  ];
-  memoryDB.qnas.push(...defaultQnas);
-
-  // Seed dynamic activity logs
-  const defaultAuditLogs = [
-    { _id: "log-1", actorName: "مدیر سیستم", action: "ایجاد درس جدید", target: "دندانپزشکی زیبایی", createdAt: new Date() },
-    { _id: "log-2", actorName: "دکتر زهرا کریمی", action: "انتشار مقاله جدید", target: "راهنمای تراش کامپوزیت", createdAt: new Date() }
-  ];
-  memoryDB.auditLogs.push(...defaultAuditLogs);
-
-  // Seed notifications
-  const defaultNotifications = [
-    { _id: "not-1", targetRole: "admin", title: "ثبت نام کاربر جدید", content: "یک دانشجو جدید با شماره همراه ثبت‌نام کرد.", isRead: false, createdAt: new Date() }
-  ];
-  memoryDB.notifications.push(...defaultNotifications);
-
-  // Seed default data in memory store
-  const defaultAdmin = {
-    _id: "mem-admin-id",
-    name: "مدیر سایت (RMO)",
-    email: "dentalfyweb@gmail.com",
-    password: "rmo2026", // Plain text in fallback mode for easy playground use
-    role: "admin" as const,
-    profilePicture: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200",
-    resetPasswordRequested: false,
-    temporaryPassword: "",
-    createdAt: new Date()
-  };
-  memoryDB.users.push(defaultAdmin);
 
   const defaultCourses = [
     {
@@ -380,7 +291,244 @@ export async function startServer() {
       createdAt: new Date()
     }
   ];
-  memoryDB.courses.push(...defaultCourses);
+
+  const defaultPosts = [
+    {
+      _id: "mem-post-1",
+      title: "راهنمای گام‌به‌گام تراش لمینت سرامیکی و اصول انتخاب سمنت رزینی",
+      summary: "مرور جامع اصول بیومکانیک تراش محافظه‌کارانه مینایی، آنالیز لبخند و پروتکل چسباندن با سمنت‌های نوری در لامینیت‌های فلدسپاتیک و لیتیوم دی‌سیلیکات.",
+      author: "mem-author-1",
+      course: "mem-course-1",
+      category: "لمینت‌های سرامیکی",
+      status: "published",
+      tags: ["ترمیمی", "لمینت سرامیکی", "سمنت رزینی", "زیبایی"],
+      coverImage: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&q=80&w=800",
+      content: [
+        {
+          id: "b-1",
+          type: "heading",
+          value: { text: "مقدمه بالینی و ارزیابی مینای دندان", level: "h2" }
+        },
+        {
+          id: "b-2",
+          type: "text",
+          value: "در دندانپزشکی ترمیمی نوین، حفظ حداکثری مینای دندان (Enamel Preservation) پایه و اساس موفقیت بلندمدت لمینت‌های سرامیکی است. پیوند رزین به مینای اچ شده با اسید فسفوریک ۳۷٪، قوی‌ترین و پایدارترین اتصال هیدرولیتیک را ایجاد می‌کند. بنابراین در ناحیه لبیال، تراش نباید از عمق ۰.۳ الی ۰.۵ میلی‌متر فراتر برود تا از اکسپوز عاج جلوگیری به عمل آید."
+        },
+        {
+          id: "b-3",
+          type: "quote",
+          value: {
+            text: "قاعده زرین در آماده‌سازی لمینت: تراش محافظه‌کارانه داخل مینا دوام باندینگ را تا ۹۵٪ در پیگیری‌های ده‌ساله تضمین می‌کند.",
+            author: "دکتر زهرا کریمی - متخصص دندانپزشکی ترمیمی"
+          }
+        },
+        {
+          id: "b-4",
+          type: "heading",
+          value: { text: "پروتکل پنج‌مرحله‌ای آماده‌سازی و قالب‌گیری", level: "h3" }
+        },
+        {
+          id: "b-5",
+          type: "list",
+          value: {
+            listType: "ordered",
+            items: [
+              "طراحی شیارهای هدایت عمق (Depth Grooves) با فرزهای سه‌پله‌ای کالیبره",
+              "یکدست‌سازی سطح لبیال و اتصال شیارها با فرز مخروطی سرگرد (Round-end Taper)",
+              "آماده‌سازی لبه انسیزال با کاهش ۱ الی ۱.۵ میلی‌متر به صورت Butt-joint یا Chamfer ملایم",
+              "پک کردن نخ زیر لثه‌ای سایز ۰۰۰ برای عقب‌زدن موقت لثه بدون آسیب به بافت همبند",
+              "پولیش لبه‌های تراش با دیسک‌های نرم پرداخت و اخذ قالب سیلیکونی افزایشی (A-Silicone)"
+            ]
+          }
+        },
+        {
+          id: "b-6",
+          type: "html",
+          value: {
+            code: `<div class="overflow-x-auto my-4"><table class="w-full text-right border border-teal-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm"><thead class="bg-teal-800 text-white font-bold text-xs md:text-sm"><tr><th class="p-3">نوع سمنت</th><th class="p-3">مکانیسم سخت‌شدن</th><th class="p-3">موارد کاربرد توصیه‌شده</th><th class="p-3">ثبات رنگ درازمدت</th></tr></thead><tbody class="text-xs divide-y divide-slate-200 dark:divide-slate-700 dark:text-slate-200"><tr class="bg-white dark:bg-slate-800"><td class="p-3 font-bold text-teal-700 dark:text-teal-400">Light-Cure Resin Cement</td><td class="p-3">صرفاً فعال‌سازی نوری</td><td class="p-3">لمینت‌های شفاف با ضخامت زیر ۰.۸ میلی‌متر</td><td class="p-3 text-emerald-600 font-bold">بسیار عالی (عدم تغییر رنگ با آمین‌ها)</td></tr><tr class="bg-slate-50 dark:bg-slate-900"><td class="p-3 font-bold text-teal-700 dark:text-teal-400">Dual-Cure Resin Cement</td><td class="p-3">نوری و شیمیایی توأم</td><td class="p-3">رستوریشن‌های ضخیم‌تر یا نیمه‌مات (بالای ۱ میلی‌متر)</td><td class="p-3 text-amber-600">خوب (احتمال اندک تیرگی ناشی از ردوکس شیمیایی)</td></tr></tbody></table></div>`
+          }
+        },
+        {
+          id: "b-7",
+          type: "quiz",
+          value: {
+            question: "در چسباندن ونیرهای سرامیکی بسیار نازک و شفاف فلدسپاتیک، کدام سمنت رزینی به دلیل ثبات رنگ برتر ارجحیت کامل دارد؟",
+            options: [
+              "سمنت رزینی نوری خالص (Light-Cure Resin Cement)",
+              "سمنت زینک فسفات معمولی",
+              "سمنت دوال کیور شیمیایی-نوری",
+              "سمنت گلاس آینومر سلف کیور"
+            ],
+            correctAnswer: 0,
+            explanation: "سمنت‌های صرفاً نوری به دلیل نداشتن آغازگرهای آمین ترشیو که با گذشت زمان زرد می‌شوند، بهترین پایداری نوری و ثبات شید رنگ را برای لمینت‌های نازک فراهم می‌کنند."
+          }
+        }
+      ],
+      createdAt: new Date(Date.now() - 3600000 * 24 * 3),
+      updatedAt: new Date(Date.now() - 3600000 * 24 * 3)
+    },
+    {
+      _id: "mem-post-2",
+      title: "پروتکل نوین پاکسازی و آماده‌سازی کانال‌های منحنی با فایل‌های روتاری نیکل-تیتانیوم",
+      summary: "بررسی استراتژی‌های پیشگیری از شکست فایل در کانال‌های با انحنای شدید و متدهای فعال‌سازی هیدرودینامیک شستشو با سدیم هیپوکلریت ۵.۲۵٪.",
+      author: "mem-author-2",
+      course: "mem-course-2",
+      category: "فایلینگ روتاری و آماده‌سازی کانال",
+      status: "published",
+      tags: ["اندودنتیکس", "فایل روتاری", "درمان ریشه", "پاکسازی کانال"],
+      coverImage: "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&q=80&w=800",
+      content: [
+        {
+          id: "b-201",
+          type: "heading",
+          value: { text: "چالش‌های بیومکانیکال در کانال‌های خمیده ریشه", level: "h2" }
+        },
+        {
+          id: "b-202",
+          type: "text",
+          value: "شکستگی فایل روتاری (Separated Instrument) یکی از ناخوشایندترین تجربیات در اندودنتیکس است که عمدتاً به دو دلیل رخ می‌دهد: تنش پیچشی (Torsional Stress) و خستگی تناوبی دوره‌ای (Cyclic Fatigue). در کانال‌های با انحنای تند، خستگی دوره‌ای علت اصلی جداشدن ابزار بدون تغییر شکل ظاهری قبلی است."
+        },
+        {
+          id: "b-203",
+          type: "quote",
+          value: {
+            text: "هیچ‌گاه فایل روتاری را در کانال خشک نچرخانید؛ حضور مداوم ژل روان‌ساز EDTA و محلول NaOCl تنش اصطکاکی را تا ۷۰ درصد کاهش می‌دهد.",
+            author: "دکتر احسان راد - متخصص اندودنتیکس"
+          }
+        },
+        {
+          id: "b-204",
+          type: "heading",
+          value: { text: "دستورالعمل گام‌به‌گام کار با فایل‌های عملیات حرارتی‌شده (Heat-Treated)", level: "h3" }
+        },
+        {
+          id: "b-205",
+          type: "list",
+          value: {
+            listType: "ordered",
+            items: [
+              "ایجاد مسیر مستقیم دسترسی کرونال (Straight-line Access) و حذف لبه‌های عاجی مانع",
+              "تعیین طول کارکرد قطعی با اپکس‌لوکیتور دیجیتال و تایید با رادیوگرافی موازی",
+              "ایجاد گلاید پث مطمئن تا فایل دستی شماره ۱۵ یا فایل روتاری گلایدپث مخصوص",
+              "کاربرد حرکت ملایم بالا-پایین (Pecking Motion) حداکثر ۱ تا ۲ ثانیه در عمق بدون فشار دست",
+              "شستشوی فراوان بین هر تعویض فایل و پاکسازی براده‌های عاجی از شیارهای فایل"
+            ]
+          }
+        },
+        {
+          id: "b-206",
+          type: "quiz",
+          value: {
+            question: "کدام یک از فاکتورهای زیر بیشترین تاثیر را در کاهش شکست فایل ناشی از خستگی دوره‌ای (Cyclic Fatigue) دارد؟",
+            options: [
+              "استفاده از آلیاژهای کنترل حافظه با عملیات حرارتی (Gold/Blue Heat Treated)",
+              "افزایش سرعت چرخش موتور به بالای ۶۰۰ دور بر دقیقه",
+              "اعمال فشار عمودی بیشتر برای رد شدن از خم کانال",
+              "خشک کردن کامل کانال پیش از ورود فایل"
+            ],
+            correctAnswer: 0,
+            explanation: "آلیاژهای NiTi تحت عملیات حرارتی (نظیر Gold و Blue Wire) انعطاف‌پذیری فوق‌العاده بالاتر و مقاومت چشمگیری در برابر خستگی دوره‌ای نسبت به نیکل تیتانیوم کلاسیک دارند."
+          }
+        }
+      ],
+      createdAt: new Date(Date.now() - 3600000 * 24 * 2),
+      updatedAt: new Date(Date.now() - 3600000 * 24 * 2)
+    },
+    {
+      _id: "mem-post-3",
+      title: "اصول بیومکانیکی قراردهی ایمپلنت فوری (Immediate Implant) در ساکت دندان‌های قدامی",
+      summary: "شاخص‌های کلیدی در انتخاب بیمار، حفظ باکال پلیت، مدیریت فاصله پرش (Jumping Distance) و تکنیک‌های بارگذاری فوری با روکش موقت.",
+      author: "mem-author-3",
+      course: "mem-course-5",
+      category: "ایمپلنتولوژی و کاشت دندان",
+      status: "published",
+      tags: ["جراحی", "ایمپلنتولوژی", "پیوند استخوان", "ساکت دندانی"],
+      coverImage: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&q=80&w=800",
+      content: [
+        {
+          id: "b-301",
+          type: "heading",
+          value: { text: "معیارهای ارزیابی استخوان و ثبات اولیه", level: "h2" }
+        },
+        {
+          id: "b-302",
+          type: "text",
+          value: "کاشت فوری فیکسچر در ساکت تازه کشیده‌شده مزایای فراوانی از جمله کاهش تعداد مراحل جراحی و حفظ کانتور بافت نرم دارد. با این حال، شرط اولیه این درمان، دستیابی به ثبات اولیه محکم (Primary Stability بالای ۳۵ تا ۴۵ نیوتن‌سانتی‌متر) با درگیر کردن استخوان آپیکال به طول حداقل ۳ تا ۴ میلی‌متر است."
+        },
+        {
+          id: "b-303",
+          type: "quote",
+          value: {
+            text: "ایمپلنت باید متمایل به دیواره پالاتال قرار داده شود تا حداقل ۲ میلی‌متر فاصله بین بدنه ایمپلنت و استخوان باکال برای قرار دادن پودر استخوان حفظ گردد.",
+            author: "دکتر سارا معتمدی - جراح فک و صورت"
+          }
+        },
+        {
+          id: "b-304",
+          type: "html",
+          value: {
+            code: `<div class="bg-amber-50 dark:bg-amber-950/40 p-4 rounded-xl border-r-4 border-amber-500 my-4 text-xs md:text-sm text-slate-800 dark:text-slate-200 space-y-1.5"><h5 class="font-bold text-amber-800 dark:text-amber-300">⚠️ موارد کنترااندیکاسیون قطعی ایمپلنت فوری:</h5><ul class="list-disc pr-4 space-y-1"><li>وجود عفونت حاد چرکی فعال همراه با فیستول در ناحیه پری‌آپیکال</li><li>تحلیل یا تخریب وسیع باکال پلیت استخوانی (بیش از ۵۰ درصد دیواره باکال)</li><li>کمبود ساپورت استخوانی آپیکال برای دستیابی به تورک حداقل ۳۰ Ncm</li><li>بیماران با عدم تعادل هورمونی شدید یا دیابت کنترل‌نشده</li></ul></div>`
+          }
+        },
+        {
+          id: "b-305",
+          type: "quiz",
+          value: {
+            question: "اگر فاصله افقی بین فیکسچر ایمپلنت و باکال پلیت استخوان (Jumping Distance) بیش از ۱.۵ الی ۲ میلی‌متر باشد، چه اقدامی الزامی است؟",
+            options: [
+              "پر کردن این فضا با ماده پیوند استخوان (Bone Graft / Xenograft)",
+              "رها کردن ساکت بدون پیوند برای پر شدن طبیعی با لخته خون",
+              "چرخاندن مجدد ایمپلنت به سمت دیواره باکال",
+              "استفاده از فیکسچر با قطر دو برابر"
+            ],
+            correctAnswer: 0,
+            explanation: "پر کردن گپ استخوانی با مواد گرافت با تحلیل کند (مانند زنوگرافت گاوی) مانع از ریزش و کلپس باکال پلیت شده و استتیک درازمدت بافت نرم را حفظ می‌کند."
+          }
+        }
+      ],
+      createdAt: new Date(Date.now() - 3600000 * 24 * 1),
+      updatedAt: new Date(Date.now() - 3600000 * 24 * 1)
+    },
+    {
+      _id: "mem-post-4",
+      title: "تکنیک‌های لایه‌گذاری ناتورالیستیک در کامپوزیت‌های قدامی و آناتومی ماملون‌ها",
+      summary: "هنر شبیه‌سازی لایه‌های مینا، عاج و افکت‌های ترنسلوسنسی انسیزال با استفاده از کامپوزیت‌های نانوهیبرید در ترمیم شکستگی‌های کلاس ۴.",
+      author: "mem-author-1",
+      course: "mem-course-1",
+      category: "کامپوزیت ونیر و لایه‌گذاری",
+      status: "published",
+      tags: ["کامپوزیت", "استراتیفیکیشن", "آناتومی دندان", "ونیر"],
+      coverImage: "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?auto=format&fit=crop&q=80&w=800",
+      content: [
+        {
+          id: "b-401",
+          type: "heading",
+          value: { text: "آناتومی اپتیکال دندان طبیعی: عاج در برابر مینا", level: "h2" }
+        },
+        {
+          id: "b-402",
+          type: "text",
+          value: "دندان‌های طبیعی ساختاری تک‌بعدی ندارند. عاج دندان (Dentin) مسئول اصلی رنگ پایه (Hue & Chroma) و کدر بودن است، در حالی که مینا (Enamel) به عنوان یک منشور ترنسلوسنت عمل کرده و درخشش و روشنایی (Value) ترمیم را تنظیم می‌کند. لایه‌گذاری لایه به لایه با این مفهوم (Polychromatic Layering) ترمیم را کاملاً نامرئی می‌سازد."
+        },
+        {
+          id: "b-403",
+          type: "list",
+          value: {
+            listType: "bullet",
+            items: [
+              "ایجاد شلف پالاتال (Palatal Shelf) به ضخامت کمتر از ۰.۵ میلی‌متر با کامپوزیت مینایی یا اینسیزال",
+              "بازسازی هسته عاجی با کامپوزیت دنتین با کروما بالاتر و فرم‌دهی سه لوب ماملونی",
+              "اعمال افکت‌های آبی/اوپال در فضاهای اینترپریسماتیک بین ماملون‌ها",
+              "پوشش نهایی با کامپوزیت اناملی با ضخامت یکنواخت ۰.۵ میلی‌متر",
+              "پرداخت ماکروتکسچر و میکروتکسچر برای شکست طبیعی نور"
+            ]
+          }
+        }
+      ],
+      createdAt: new Date(Date.now() - 3600000 * 12),
+      updatedAt: new Date(Date.now() - 3600000 * 12)
+    }
+  ];
 
   const defaultLibraryDocs = [
     {
@@ -412,7 +560,6 @@ export async function startServer() {
       createdAt: new Date()
     }
   ];
-  memoryDB.libraryDocs.push(...defaultLibraryDocs);
 
   const defaultFAQs = [
     {
@@ -434,7 +581,6 @@ export async function startServer() {
       createdAt: new Date()
     }
   ];
-  memoryDB.faqs.push(...defaultFAQs);
 
   // --- CONNECT MONGO DB OR FALLBACK TO MEMORY ---
   try {
@@ -549,6 +695,9 @@ export async function startServer() {
           console.log(`🌱 Seeded Default Category: "${cat.name}" (${cat.slug})`);
         }
       }
+
+      const mongoPostsCount = await Post.countDocuments();
+      console.log(`📦 MongoDB Status: ${mongoPostsCount} clinical posts verified in database.`);
 
       // Seed Site Settings if not exist
       let settingsExist = await SiteSettings.findOne();
@@ -1453,25 +1602,19 @@ export async function startServer() {
         }
 
         if (targetAuthorId && targetAuthorId !== "all") {
-          if (targetAuthorId.match(/^[0-9a-fA-F]{24}$/)) {
-            query.author = targetAuthorId;
-          }
+          query.author = targetAuthorId;
           if (role === "author" || role === "editor") {
             delete query.status; 
           }
         }
         
         if (courseId && courseId !== "undefined" && courseId !== "null" && courseId !== "" && courseId !== "all") {
-          if (typeof courseId === "string" && courseId.match(/^[0-9a-fA-F]{24}$/)) {
-            query.course = courseId;
-          } else {
-            query.course = null;
-          }
+          query.course = courseId;
         }
 
         posts = await Post.find(query)
-          .populate("author", "name email profilePicture role permissions")
-          .populate("course", "title description syllabus")
+          .populate({ path: "author", model: User, select: "name email profilePicture role permissions bio" })
+          .populate({ path: "course", model: Course, select: "title description syllabus" })
           .sort({ createdAt: -1 });
       } else {
         posts = memoryDB.posts.map(post => {
@@ -1521,7 +1664,7 @@ export async function startServer() {
       // and ALL deep content block values (headings, paragraphs, lists, quotes, image captions, videos)
       if (querySearch) {
         const normalizedQuery = normalizePersianText(querySearch);
-        const queryTerms = normalizedQuery.split(/s+/).filter(Boolean);
+        const queryTerms = normalizedQuery.split(/\s+/).filter(Boolean);
 
         posts = posts.filter(post => {
           const fullText = normalizePersianText(extractPostFullText(post));
@@ -1543,8 +1686,8 @@ export async function startServer() {
 
     if (isDBConnected) {
       post = await Post.findById(id)
-        .populate("author", "name email profilePicture")
-        .populate("course", "title description syllabus");
+        .populate({ path: "author", model: User, select: "name email profilePicture role permissions bio" })
+        .populate({ path: "course", model: Course, select: "title description syllabus" });
     } else {
       const rawPost = memoryDB.posts.find(p => p._id === id);
       if (rawPost) {
@@ -2249,18 +2392,21 @@ ${depthRequirement}
 
   app.post("/api/posts/:postId/comments", async (req, res) => {
     const { postId } = req.params;
-    const { name, email, text, role } = req.body;
-    if (!name || !email || !text) {
-      return res.status(400).json({ error: "پر کردن تمامی فیلدها الزامی است" });
+    const name = req.body.name || req.body.authorName || "کاربر دنتالفای";
+    const email = req.body.email || "guest@dentalfy.ir";
+    const text = req.body.text || req.body.content;
+    const role = req.body.role || "public";
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: "متن نظر یا پرسش الزامی است" });
     }
     try {
-      const autoApprove = (role === "admin" || role === "author");
+      const autoApprove = (role === "admin" || role === "author" || role === "student");
       if (isDBConnected) {
         const comment = await Comment.create({
           postId,
           name,
           email,
-          text,
+          text: text.trim(),
           role: role || "public",
           isApproved: autoApprove
         });
@@ -2271,7 +2417,7 @@ ${depthRequirement}
           postId,
           name,
           email,
-          text,
+          text: text.trim(),
           role: role || "public",
           isApproved: autoApprove,
           createdAt: new Date()
@@ -2577,6 +2723,9 @@ ${depthRequirement}
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
+        if (!Array.isArray(user.bookmarks)) {
+          user.bookmarks = [];
+        }
         const index = user.bookmarks.indexOf(postId);
         if (index > -1) {
           user.bookmarks.splice(index, 1);
@@ -2589,6 +2738,9 @@ ${depthRequirement}
         const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
+        if (!Array.isArray(user.bookmarks)) {
+          user.bookmarks = [];
+        }
         const index = user.bookmarks.indexOf(postId);
         if (index > -1) {
           user.bookmarks.splice(index, 1);
@@ -2608,12 +2760,14 @@ ${depthRequirement}
       if (isDBConnected) {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        const posts = await Post.find({ _id: { $in: user.bookmarks } }).populate("author", "name email profilePicture");
+        const userBookmarks = Array.isArray(user.bookmarks) ? user.bookmarks : [];
+        const posts = await Post.find({ _id: { $in: userBookmarks } }).populate({ path: "author", model: User, select: "name email profilePicture" });
         res.json(posts);
       } else {
-        const user = memoryDB.users.find(u => u._id === userId);
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        const posts = memoryDB.posts.filter(p => user.bookmarks.includes(p._id));
+        const userBookmarks = Array.isArray(user.bookmarks) ? user.bookmarks : [];
+        const posts = memoryDB.posts.filter(p => userBookmarks.includes(p._id));
         res.json(posts);
       }
     } catch (err: any) {
@@ -2631,6 +2785,9 @@ ${depthRequirement}
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
+        if (!Array.isArray(user.readingHistory)) {
+          user.readingHistory = [];
+        }
         // Filter duplicates
         user.readingHistory = user.readingHistory.filter(h => h.itemId !== itemId);
         user.readingHistory.unshift({ itemId, itemType, title: title || "محتوا", visitedAt: new Date() });
@@ -2640,9 +2797,12 @@ ${depthRequirement}
         await user.save();
         res.json({ success: true, history: user.readingHistory });
       } else {
-        const user = memoryDB.users.find(u => u._id === userId);
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
+        if (!Array.isArray(user.readingHistory)) {
+          user.readingHistory = [];
+        }
         user.readingHistory = user.readingHistory.filter((h: any) => h.itemId !== itemId);
         user.readingHistory.unshift({ itemId, itemType, title: title || "محتوا", visitedAt: new Date() });
         if (user.readingHistory.length > 10) user.readingHistory.pop();
@@ -2659,11 +2819,11 @@ ${depthRequirement}
       if (isDBConnected) {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        res.json(user.readingHistory || []);
+        res.json(Array.isArray(user.readingHistory) ? user.readingHistory : []);
       } else {
-        const user = memoryDB.users.find(u => u._id === userId);
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        res.json(user.readingHistory || []);
+        res.json(Array.isArray(user.readingHistory) ? user.readingHistory : []);
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -2698,14 +2858,18 @@ ${depthRequirement}
       if (isDBConnected) {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        user.readingHistory = user.readingHistory.filter(h => h.itemId !== itemId);
-        await user.save();
-        res.json({ success: true, history: user.readingHistory });
+        if (Array.isArray(user.readingHistory)) {
+          user.readingHistory = user.readingHistory.filter(h => h.itemId !== itemId);
+          await user.save();
+        }
+        res.json({ success: true, history: user.readingHistory || [] });
       } else {
         const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        user.readingHistory = user.readingHistory.filter((h: any) => h.itemId !== itemId);
-        res.json({ success: true, history: user.readingHistory });
+        if (Array.isArray(user.readingHistory)) {
+          user.readingHistory = user.readingHistory.filter((h: any) => h.itemId !== itemId);
+        }
+        res.json({ success: true, history: user.readingHistory || [] });
       }
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -2738,11 +2902,18 @@ ${depthRequirement}
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
+        if (!Array.isArray(user.progress)) {
+          user.progress = [];
+        }
+
         let progIndex = user.progress.findIndex(p => p.courseId === courseId);
         if (progIndex === -1) {
           user.progress.push({ courseId, completedLessons: [postId], percentage: 0 });
           progIndex = user.progress.length - 1;
         } else {
+          if (!Array.isArray(user.progress[progIndex].completedLessons)) {
+            user.progress[progIndex].completedLessons = [];
+          }
           const completed = user.progress[progIndex].completedLessons;
           const posIdx = completed.indexOf(postId);
           if (posIdx === -1) {
@@ -2763,11 +2934,18 @@ ${depthRequirement}
         const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
 
+        if (!Array.isArray(user.progress)) {
+          user.progress = [];
+        }
+
         let progIndex = user.progress.findIndex((p: any) => p.courseId === courseId);
         if (progIndex === -1) {
           user.progress.push({ courseId, completedLessons: [postId], percentage: 0 });
           progIndex = user.progress.length - 1;
         } else {
+          if (!Array.isArray(user.progress[progIndex].completedLessons)) {
+            user.progress[progIndex].completedLessons = [];
+          }
           const completed = user.progress[progIndex].completedLessons;
           const posIdx = completed.indexOf(postId);
           if (posIdx === -1) {
@@ -2795,12 +2973,14 @@ ${depthRequirement}
       if (isDBConnected) {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        const progress = user.progress.find(p => p.courseId === courseId) || { courseId, completedLessons: [], percentage: 0 };
+        const userProg = Array.isArray(user.progress) ? user.progress : [];
+        const progress = userProg.find(p => p.courseId === courseId) || { courseId, completedLessons: [], percentage: 0 };
         res.json(progress);
       } else {
-        const user = memoryDB.users.find(u => u._id === userId);
+        const user = memoryDB.users.find(u => u._id === userId || u.id === userId);
         if (!user) return res.status(404).json({ error: "کاربر یافت نشد" });
-        const progress = user.progress.find((p: any) => p.courseId === courseId) || { courseId, completedLessons: [], percentage: 0 };
+        const userProg = Array.isArray(user.progress) ? user.progress : [];
+        const progress = userProg.find((p: any) => p.courseId === courseId) || { courseId, completedLessons: [], percentage: 0 };
         res.json(progress);
       }
     } catch (err: any) {

@@ -107,8 +107,8 @@ const BlockSchema = new Schema<IBlock>({
 const PostSchema = new Schema<IPost>({
   title: { type: String, required: true, trim: true },
   content: { type: [BlockSchema], default: [] },
-  author: { type: Schema.Types.Mixed, required: true },
-  course: { type: Schema.Types.Mixed, default: null },
+  author: { type: Schema.Types.ObjectId, ref: "User", required: true },
+  course: { type: Schema.Types.ObjectId, ref: "Course", default: null },
   category: { type: String, default: "" },
   status: { type: String, enum: ["draft", "pending", "published", "rejected"], default: "pending" },
   tags: { type: [String], default: [] },
